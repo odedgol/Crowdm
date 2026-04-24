@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Builder · Variant A — Clean Light</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #f7f8fa;
+    --surface: #ffffff;
+    --surface-2: #fafbfc;
+    --border: #e5e7eb;
+    --border-strong: #d1d5db;
+    --text: #0f172a;
+    --text-soft: #475569;
+    --text-mute: #94a3b8;
+    --primary: #2563eb;
+    --primary-600: #1d4ed8;
+    --primary-50: #eff6ff;
+    --primary-100: #dbeafe;
+    --success: #15803d;
+    --success-50: #f0fdf4;
+    --purple: #7c3aed;
+    --danger: #dc2626;
+    --radius: 12px;
+    --radius-lg: 14px;
+    --shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  /* Top bar */
+  .topbar {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 30;
+  }
+  .topbar-inner {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 14px 28px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .brand .logo { font-size: 20px; }
+  .brand .sub { color: var(--text-mute); font-weight: 500; font-size: 13px; }
+  .top-actions { margin-left: auto; display: flex; gap: 8px; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    background: var(--surface);
+    color: var(--text);
+    border-color: var(--border-strong);
+    transition: background .12s ease;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn-primary {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+    box-shadow: 0 1px 2px rgba(37,99,235,.25);
+  }
+  .btn-primary:hover { background: var(--primary-600); }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--text-soft); }
+  .btn-ghost:hover { color: var(--text); background: var(--bg); }
+  .btn-sm { padding: 5px 11px; font-size: 12.5px; }
+
+  /* Layout */
+  .wrap {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 24px 28px 80px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(420px, 560px);
+    gap: 24px;
+    align-items: start;
+  }
+  @media (max-width: 1120px) { .wrap { grid-template-columns: 1fr; } .json-panel { position: static !important; max-height: 480px !important; } }
+
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .lede { color: var(--text-soft); font-size: 14px; margin: 0 0 24px; }
+
+  /* Cards */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    box-shadow: var(--shadow);
+  }
+  .card + .card { margin-top: 16px; }
+  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .card-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+  .card-head .spacer { flex: 1; }
+  .step {
+    width: 24px; height: 24px; border-radius: 7px;
+    background: var(--primary-50); color: var(--primary);
+    font-weight: 700; font-size: 12.5px;
+    display: inline-flex; align-items: center; justify-content: center;
+  }
+
+  /* Inputs */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .grid-2 .full { grid-column: 1/-1; }
+  .label { display: block; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+  .input {
+    width: 100%;
+    background: white;
+    border: 1px solid var(--border-strong);
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 13.5px;
+    font-family: inherit;
+    color: var(--text);
+  }
+  textarea.input { resize: vertical; min-height: 68px; line-height: 1.5; }
+  select.input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7280' d='M5 6 0 0h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; padding-right: 30px; }
+
+  /* Switch */
+  .switch { position: relative; width: 34px; height: 20px; background: #d1d5db; border-radius: 999px; cursor: pointer; flex-shrink: 0; }
+  .switch::after { content:''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.2); }
+  .switch.on { background: var(--primary); }
+  .switch.on::after { left: 16px; }
+  .switch-row { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-soft); font-weight: 500; }
+
+  /* Tabs (stage input) */
+  .tabs { display: inline-flex; background: var(--bg); border: 1px solid var(--border); padding: 3px; border-radius: 8px; }
+  .tab { padding: 4px 11px; font-size: 12px; font-weight: 500; color: var(--text-soft); border-radius: 5px; cursor: pointer; }
+  .tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+
+  /* Stages (timeline) */
+  .timeline { position: relative; padding-left: 36px; }
+  .timeline::before { content:''; position: absolute; left: 11px; top: 10px; bottom: 46px; width: 2px; background: var(--border); }
+  .stage {
+    position: relative;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: var(--surface-2);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .stage.expanded { background: white; border-color: var(--primary-100); box-shadow: 0 0 0 3px rgba(37,99,235,0.06); }
+  .stage .num {
+    position: absolute; left: -34px; top: 11px;
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--primary); color: white;
+    font-size: 12px; font-weight: 700;
+    display: inline-flex; align-items: center; justify-content: center;
+    border: 3px solid var(--surface);
+  }
+  .stage .head { display: flex; align-items: center; gap: 8px; }
+  .stage .title { font-weight: 600; font-size: 13.5px; flex: 1; }
+  .stage .meta { color: var(--text-mute); font-size: 12px; }
+  .stage .close { color: var(--text-mute); cursor: pointer; font-size: 13px; padding: 2px 6px; border-radius: 5px; }
+  .stage .body { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .extract-banner {
+    background: var(--success-50); border: 1px solid #bbf7d0; color: var(--success);
+    border-radius: 7px; padding: 6px 10px; font-size: 12.5px; display: flex; align-items: center; gap: 6px;
+  }
+  .add-stage {
+    width: 100%; padding: 10px;
+    border: 1.5px dashed var(--border-strong);
+    border-radius: 10px;
+    background: transparent; color: var(--text-soft);
+    font-family: inherit; font-size: 12.5px; font-weight: 500;
+    cursor: pointer;
+  }
+
+  /* Personas compact */
+  .persona-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .pchip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 3px 10px 3px 5px;
+    background: var(--primary-50);
+    border: 1px solid var(--primary-100);
+    color: var(--primary-600);
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .pchip .ci { width: 18px; height: 18px; border-radius: 50%; background: white; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+  .persona-footer { color: var(--text-mute); font-size: 12px; margin-top: 10px; text-align: center; }
+
+  /* JSON panel (right) */
+  .json-panel {
+    position: sticky;
+    top: 84px;
+    max-height: calc(100vh - 104px);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .json-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-2);
+  }
+  .json-head h3 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .json-head .valid-pill {
+    display: inline-flex; align-items: center; gap: 4px;
+    color: var(--success);
+    background: var(--success-50);
+    border: 1px solid #bbf7d0;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 600;
+    padding: 2px 9px;
+  }
+  .json-head .spacer { flex: 1; }
+  .json-body {
+    padding: 14px 18px;
+    overflow: auto;
+    flex: 1;
+    font-family: "JetBrains Mono", ui-monospace, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    color: var(--text);
+  }
+  .json-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .k { color: var(--primary); }
+  .s { color: #0e7c3f; }
+  .n { color: var(--purple); }
+  .b { color: var(--primary-600); font-weight: 500; }
+  .x { color: var(--text-mute); font-style: italic; }
+  .json-foot {
+    padding: 10px 18px;
+    border-top: 1px solid var(--border);
+    background: var(--surface-2);
+    font-size: 11.5px;
+    color: var(--text-mute);
+    display: flex; gap: 14px;
+  }
+  .json-foot span b { color: var(--text); font-weight: 600; }
+
+  .footer { max-width: 1400px; margin: 0 auto; padding: 22px 28px 40px; color: var(--text-mute); font-size: 12.5px; border-top: 1px solid var(--border); }
+  .footer a { color: var(--text-soft); text-decoration: none; }
+  .footer a:hover { color: var(--primary); }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="logo">🧰</span>
+      <span>Crowdm Setup Builder</span>
+      <span class="sub">· Variant A</span>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-sm">⇣ Import existing…</button>
+      <button class="btn btn-sm btn-ghost">Reset</button>
+      <button class="btn btn-sm">⧉ Copy JSON</button>
+      <button class="btn btn-sm btn-primary">↓ Download JSON</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div>
+    <h1>Build your Crowdm simulation</h1>
+    <p class="lede">Fill the form on the left. JSON on the right updates live. Download it and drop it into Crowdm's <b>Menu → Import from JSON…</b></p>
+
+    <!-- 1. Product -->
+    <section class="card">
+      <div class="card-head"><span class="step">1</span><h2>Product &amp; Audience</h2></div>
+      <div class="grid-2">
+        <div>
+          <label class="label">Product Name</label>
+          <input class="input" value="AuroraGlow LED Sunrise Alarm" />
+        </div>
+        <div>
+          <label class="label">Price (as shown to user)</label>
+          <input class="input" value="$79 (was $119, free shipping over $50)" />
+        </div>
+        <div class="full">
+          <label class="label">Target Audience</label>
+          <input class="input" value="25-45 urban professionals with poor sleep quality who already use wellness apps" />
+        </div>
+        <div class="full">
+          <label class="label">Description</label>
+          <textarea class="input">Bedside alarm that simulates a 30-minute sunrise to wake you naturally. Bluetooth speaker, FM radio, USB-C charging, 20 light modes.</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Ad creative -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">2</span><h2>Ad Creative</h2>
+        <div class="spacer"></div>
+        <div class="switch-row"><span>A/B variant</span><div class="switch"></div></div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label class="label">Headline</label>
+          <input class="input" value="The Alarm That Wakes You With Sunlight, Not Sound" />
+        </div>
+        <div>
+          <label class="label">CTA</label>
+          <input class="input" value="See how it works" />
+        </div>
+        <div class="full">
+          <label class="label">Body</label>
+          <textarea class="input">Thousands of light sleepers finally wake up without dread. 30-min sunrise simulation. Free US shipping.</textarea>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Stages -->
+    <section class="card">
+      <div class="card-head"><span class="step">3</span><h2>Funnel Stages</h2></div>
+      <div class="timeline">
+        <div class="stage">
+          <span class="num">1</span>
+          <div class="head"><div class="title">Native Ad (Main Creative)</div><span class="meta">headline + body + CTA</span><span class="close">✕</span></div>
+        </div>
+
+        <div class="stage expanded">
+          <span class="num">2</span>
+          <div class="head">
+            <div class="title">Landing Page A (Main Offer)</div>
+            <div class="tabs"><span class="tab active">Fetch URL</span><span class="tab">Paste text/HTML</span><span class="tab">Screenshot</span></div>
+            <span class="close">✕</span>
+          </div>
+          <div class="body">
+            <input class="input mono" value="https://myshop.example.com/auroraglow" />
+            <div class="extract-banner">✓ Text extracted successfully (412 words)</div>
+          </div>
+        </div>
+
+        <div class="stage">
+          <span class="num">3</span>
+          <div class="head"><div class="title">Price Page</div><span class="meta">text · 158 chars</span><span class="close">✕</span></div>
+        </div>
+
+        <div class="stage">
+          <span class="num">4</span>
+          <div class="head"><div class="title">Checkout Page</div><span class="meta">text · 141 chars</span><span class="close">✕</span></div>
+        </div>
+
+        <button class="add-stage">+ Add Funnel Stage</button>
+      </div>
+    </section>
+
+    <!-- 4. Personas -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">4</span><h2>Personas</h2>
+        <div class="spacer"></div>
+        <button class="btn btn-sm">⚙ Manage personas</button>
+      </div>
+      <div class="persona-chips">
+        <span class="pchip"><span class="ci">⚡</span>Impulse scroller</span>
+        <span class="pchip"><span class="ci">🔎</span>Skeptical researcher</span>
+        <span class="pchip"><span class="ci">👨‍👩‍👧</span>Budget parent</span>
+        <span class="pchip"><span class="ci">💎</span>Premium buyer</span>
+        <span class="pchip"><span class="ci">🎁</span>Gift shopper</span>
+        <span class="pchip"><span class="ci">⭐</span>Brand-loyal</span>
+      </div>
+      <div class="persona-footer">6 of 10 personas selected · click <b>Manage personas</b> to edit archetypes, characters, or add custom ones</div>
+    </section>
+
+    <!-- 5. Config -->
+    <section class="card">
+      <div class="card-head"><span class="step">5</span><h2>Model &amp; Concurrency</h2></div>
+      <div class="grid-2">
+        <div class="full">
+          <label class="label">Model</label>
+          <select class="input">
+            <option>claude-opus-4-7 (High Accuracy / Cost)</option>
+            <option>claude-sonnet-4-6 (Balanced)</option>
+            <option>claude-haiku-4-5 (Fast / Low Cost)</option>
+            <option>ollama:llama3.3</option>
+            <option>ollama: custom model…</option>
+          </select>
+        </div>
+        <div>
+          <label class="label">Concurrency</label>
+          <input class="input" value="4" />
+        </div>
+        <div>
+          <label class="label">A/B</label>
+          <input class="input" value="disabled" disabled />
+        </div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- RIGHT: JSON PANEL -->
+  <aside class="json-panel">
+    <div class="json-head">
+      <h3>📄 Live JSON</h3>
+      <span class="valid-pill">● Valid</span>
+      <div class="spacer"></div>
+      <button class="btn btn-sm">⧉ Copy</button>
+      <button class="btn btn-sm btn-primary">↓ Download</button>
+    </div>
+    <div class="json-body">
+<pre>{
+  <span class="k">"version"</span>: <span class="n">1</span>,
+  <span class="k">"campaignA"</span>: {
+    <span class="k">"label"</span>: <span class="s">"A"</span>,
+    <span class="k">"product"</span>: {
+      <span class="k">"name"</span>: <span class="s">"AuroraGlow LED Sunrise Alarm"</span>,
+      <span class="k">"description"</span>: <span class="s">"Bedside alarm that simulates a 30-minute sunrise to wake you naturally. Bluetooth speaker, FM radio, USB-C charging, 20 light modes."</span>,
+      <span class="k">"target_audience"</span>: <span class="s">"25-45 urban professionals with poor sleep quality who already use wellness apps"</span>,
+      <span class="k">"price"</span>: <span class="s">"$79 (was $119, free shipping over $50)"</span>,
+      <span class="k">"vertical"</span>: <span class="s">"e-commerce / physical products"</span>
+    },
+    <span class="k">"ad"</span>: {
+      <span class="k">"headline"</span>: <span class="s">"The Alarm That Wakes You With Sunlight, Not Sound"</span>,
+      <span class="k">"body"</span>: <span class="s">"Thousands of light sleepers finally wake up without dread. 30-min sunrise simulation. Free US shipping."</span>,
+      <span class="k">"cta"</span>: <span class="s">"See how it works"</span>,
+      <span class="k">"image_description"</span>: <span class="s">""</span>,
+      <span class="k">"image_base64"</span>: <span class="x">null</span>,
+      <span class="k">"image_media_type"</span>: <span class="x">null</span>
+    },
+    <span class="k">"stages"</span>: [
+      { <span class="k">"kind"</span>: <span class="s">"ad"</span>, <span class="k">"label"</span>: <span class="s">"Native Ad (Main Creative)"</span> },
+      {
+        <span class="k">"kind"</span>: <span class="s">"landing_a"</span>,
+        <span class="k">"label"</span>: <span class="s">"Landing Page A (Main Offer)"</span>,
+        <span class="k">"url"</span>: <span class="s">"https://myshop.example.com/auroraglow"</span>
+      },
+      {
+        <span class="k">"kind"</span>: <span class="s">"price"</span>,
+        <span class="k">"label"</span>: <span class="s">"Price Page"</span>,
+        <span class="k">"text"</span>: <span class="s">"AuroraGlow LED Sunrise Alarm — $79 (was $119). Subscribe to the newsletter and save another $10. Free US shipping."</span>
+      },
+      {
+        <span class="k">"kind"</span>: <span class="s">"checkout"</span>,
+        <span class="k">"label"</span>: <span class="s">"Checkout Page"</span>,
+        <span class="k">"text"</span>: <span class="s">"Cart: AuroraGlow x 1 — $79. Shipping: Free. Guest checkout available. Apple Pay / Google Pay / PayPal."</span>
+      }
+    ]
+  },
+  <span class="k">"campaignB"</span>: <span class="x">null</span>,
+  <span class="k">"abEnabled"</span>: <span class="b">false</span>,
+  <span class="k">"selectedModel"</span>: <span class="s">"claude-opus-4-7"</span>,
+  <span class="k">"customOllamaModel"</span>: <span class="s">""</span>,
+  <span class="k">"concurrency"</span>: <span class="n">4</span>,
+  <span class="k">"personas"</span>: [
+    {
+      <span class="k">"id"</span>: <span class="s">"impulse_scroller"</span>,
+      <span class="k">"name"</span>: <span class="s">"Maya, 28"</span>,
+      <span class="k">"archetype"</span>: <span class="s">"Impulse scroller"</span>,
+      <span class="k">"icon"</span>: <span class="s">"⚡"</span>,
+      <span class="k">"character_sheet"</span>: <span class="s">"Urban renter, phone-first, $40-120 per impulse purchase. Trust triggers: clean photography, real reviews, fast shipping."</span>,
+      <span class="k">"selected"</span>: <span class="b">true</span>
+    },
+    { <span class="k">"id"</span>: <span class="s">"skeptical_researcher"</span>, <span class="k">"name"</span>: <span class="s">"Dr. Priya, 51"</span>, <span class="k">"icon"</span>: <span class="s">"🔎"</span>, <span class="k">"selected"</span>: <span class="b">true</span> },
+    { <span class="k">"id"</span>: <span class="s">"budget_parent"</span>, <span class="k">"name"</span>: <span class="s">"Alicia, 39"</span>, <span class="k">"icon"</span>: <span class="s">"👨‍👩‍👧"</span>, <span class="k">"selected"</span>: <span class="b">true</span> },
+    { <span class="k">"id"</span>: <span class="s">"premium_buyer"</span>, <span class="k">"name"</span>: <span class="s">"Marcus, 55"</span>, <span class="k">"icon"</span>: <span class="s">"💎"</span>, <span class="k">"selected"</span>: <span class="b">true</span> },
+    { <span class="k">"id"</span>: <span class="s">"gift_shopper"</span>, <span class="k">"name"</span>: <span class="s">"Tom, 36"</span>, <span class="k">"icon"</span>: <span class="s">"🎁"</span>, <span class="k">"selected"</span>: <span class="b">true</span> },
+    { <span class="k">"id"</span>: <span class="s">"brand_loyal"</span>, <span class="k">"name"</span>: <span class="s">"Sandra, 47"</span>, <span class="k">"icon"</span>: <span class="s">"⭐"</span>, <span class="k">"selected"</span>: <span class="b">true</span> }
+  ]
+}</pre>
+    </div>
+    <div class="json-foot">
+      <span><b>6</b> personas</span>
+      <span><b>4</b> stages</span>
+      <span><b>1</b> campaign</span>
+      <span style="margin-left:auto;"><b>~2.4 KB</b></span>
+    </div>
+  </aside>
+
+</main>
+
+<footer class="footer">
+  No backend required · Exports a JSON that imports directly into Crowdm · <a href="index.html">← Back to mocks</a>
+</footer>
+
+</body>
+</html>
