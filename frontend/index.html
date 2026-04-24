@@ -29,8 +29,48 @@
       <div class="top-actions">
         <template x-if="view === 'setup'">
           <div style="display: flex; align-items: center; gap: 10px;">
-            <a class="top-link" href="#config">Configuration</a>
-            <button class="btn btn-secondary" @click="loadDemo()">Load Demo Campaign</button>
+            <div class="menu-wrap" @click.outside="menuOpen = false">
+              <button class="btn btn-secondary" @click="menuOpen = !menuOpen">☰ Menu</button>
+              <div class="menu-dd" x-show="menuOpen" x-cloak>
+                <button class="menu-item" @click="menuOpen=false; newSetup()"><span class="mi-ico">＋</span> New simulation</button>
+                <button class="menu-item" @click="menuOpen=false; loadDemo()"><span class="mi-ico">⚡</span> Load demo campaign</button>
+                <div class="menu-sep"></div>
+                <button class="menu-item" @click="menuOpen=false; $refs.importInput.click()"><span class="mi-ico">⇣</span> Import from JSON…</button>
+                <button class="menu-item" @click="menuOpen=false; exportSetup()"><span class="mi-ico">⇡</span> Export current setup</button>
+                <button class="menu-item" @click="menuOpen=false; saveCurrentSetup()"><span class="mi-ico">💾</span> Save current setup</button>
+
+                <div class="menu-sep"></div>
+                <div class="menu-section-title">Saved setups</div>
+                <template x-if="savedSetups.length === 0">
+                  <div class="menu-empty">No saved setups yet.</div>
+                </template>
+                <template x-for="s in savedSetups" :key="s.id">
+                  <div class="menu-row" @click="menuOpen=false; loadSavedSetup(s.id)">
+                    <div>
+                      <div class="title" x-text="s.name"></div>
+                      <div class="sub" x-text="relativeTime(s.updated_at)"></div>
+                    </div>
+                    <span class="del" @click.stop="deleteSavedSetup(s.id)">✕</span>
+                  </div>
+                </template>
+
+                <div class="menu-sep"></div>
+                <div class="menu-section-title">Run history</div>
+                <template x-if="savedRuns.length === 0">
+                  <div class="menu-empty">No past runs stored.</div>
+                </template>
+                <template x-for="r in savedRuns" :key="r.id">
+                  <div class="menu-row" @click="menuOpen=false; loadSavedRun(r.id)">
+                    <div>
+                      <div class="title" x-text="r.name"></div>
+                      <div class="sub"><span x-text="relativeTime(r.ran_at)"></span> · <span x-text="r.model"></span></div>
+                    </div>
+                    <span class="del" @click.stop="deleteSavedRun(r.id)">✕</span>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <input type="file" accept="application/json,.json" x-ref="importInput" style="display:none" @change="onImportFile($event)" />
             <button class="btn btn-primary" :disabled="running || !canRun()" @click="run()">
               <template x-if="!running"><span>Run Simulation →</span></template>
               <template x-if="running"><span><span class="spinner"></span> Running…</span></template>
@@ -287,47 +327,22 @@
             <div class="card-head">
               <span class="step-num">4</span>
               <h2>Select Personas to Test</h2>
+              <div class="card-head-spacer"></div>
+              <button class="btn btn-secondary btn-sm" @click="personaModalOpen = true">⚙ Manage personas</button>
             </div>
-
-            <div>
-              <template x-for="(p, i) in personas" :key="p.id">
-                <div class="persona-item" :class="p.selected && 'selected'">
-                  <span class="persona-icon" :class="personaIconClass(i)" x-text="p.icon || '👤'"></span>
-                  <div style="min-width: 0;">
-                    <template x-if="!p.editing">
-                      <div>
-                        <div class="name" x-text="p.archetype || p.name"></div>
-                        <div class="desc" x-text="shortDesc(p.character_sheet)"></div>
-                      </div>
-                    </template>
-                    <template x-if="p.editing">
-                      <div class="persona-edit-row">
-                        <input class="input" placeholder="Archetype" x-model="p.archetype" />
-                        <input class="input" placeholder="Name" x-model="p.name" />
-                        <textarea class="input" placeholder="Character sheet…" x-model="p.character_sheet" style="min-height: 90px;"></textarea>
-                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
-                          <template x-if="p.id.startsWith('custom_')">
-                            <button class="btn btn-danger btn-xs" @click="deletePersona(i)">Delete</button>
-                          </template>
-                          <button class="btn btn-secondary btn-xs" @click="p.editing = false">Done</button>
-                        </div>
-                      </div>
-                    </template>
-                  </div>
-                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
-                    <div class="persona-check" :class="p.selected && 'on'" @click="p.selected = !p.selected"></div>
-                    <template x-if="!p.editing">
-                      <button class="btn btn-ghost btn-xs" style="padding: 2px 6px;" @click="p.editing = true">edit</button>
-                    </template>
-                  </div>
-                </div>
-              </template>
-            </div>
-
-            <div style="display: flex; gap: 6px; margin-top: 10px;">
-              <button class="btn btn-secondary btn-xs" @click="addCustomPersona()">+ Add custom</button>
-              <button class="btn btn-ghost btn-xs" @click="resetPersonas()">Reset</button>
-            </div>
+            <template x-if="selectedCount() === 0">
+              <div class="persona-empty">No personas selected. Click <strong>Manage personas</strong> to pick.</div>
+            </template>
+            <template x-if="selectedCount() > 0">
+              <div class="persona-summary">
+                <template x-for="p in personas.filter((x) => x.selected)" :key="'pc_' + p.id">
+                  <span class="persona-chip-sm">
+                    <span class="ci" x-text="p.icon || '👤'"></span>
+                    <span x-text="p.archetype || p.name"></span>
+                  </span>
+                </template>
+              </div>
+            </template>
             <div class="persona-footer">
               <span x-text="selectedCount()"></span> of <span x-text="personas.length"></span> personas selected.
             </div>
@@ -571,6 +586,107 @@
         </div>
       </template>
     </main>
+  </template>
+
+  <!-- Personas modal -->
+  <template x-if="personaModalOpen">
+    <div class="modal-backdrop" @click.self="personaModalOpen = false" @keydown.escape.window="personaModalOpen = false">
+      <div class="modal">
+        <div class="modal-head">
+          <h3>⚙ Manage personas</h3>
+          <div class="spacer"></div>
+          <span style="color: var(--text-mute); font-size: 12.5px;" x-text="selectedCount() + ' of ' + personas.length + ' selected'"></span>
+          <button class="modal-close" @click="personaModalOpen = false">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-search">
+            <input class="input" placeholder="Search personas…" x-model="personaSearch" />
+          </div>
+
+          <div class="group-title">
+            <span>Built-in</span>
+            <span style="color: var(--text-mute); font-weight: 500;" x-text="'(' + builtInCount() + ')'"></span>
+          </div>
+          <template x-for="(p, i) in filteredPersonas(false)" :key="'bi_' + p.id">
+            <div class="manage-row" :class="p.selected && 'selected'">
+              <div class="persona-check" :class="p.selected && 'on'" @click="p.selected = !p.selected"></div>
+              <span class="mr-icon" x-text="p.icon || '👤'"></span>
+              <div style="min-width: 0;">
+                <template x-if="!p.editing">
+                  <div>
+                    <div class="mr-name" x-text="p.archetype || p.name"></div>
+                    <div class="mr-arch" x-text="p.name"></div>
+                    <div class="mr-sheet" x-text="shortDesc(p.character_sheet)"></div>
+                  </div>
+                </template>
+                <template x-if="p.editing">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input class="input" placeholder="Archetype" x-model="p.archetype" />
+                    <input class="input" placeholder="Name" x-model="p.name" />
+                    <input class="input" placeholder="Icon emoji" x-model="p.icon" maxlength="4" />
+                    <textarea class="input" placeholder="Character sheet…" x-model="p.character_sheet" style="min-height: 80px;"></textarea>
+                  </div>
+                </template>
+              </div>
+              <div class="mr-actions">
+                <template x-if="!p.editing">
+                  <button class="btn btn-ghost btn-xs" @click="p.editing = true">Edit</button>
+                </template>
+                <template x-if="p.editing">
+                  <button class="btn btn-secondary btn-xs" @click="p.editing = false">Done</button>
+                </template>
+              </div>
+            </div>
+          </template>
+
+          <div class="group-title">
+            <span>Custom</span>
+            <span style="color: var(--text-mute); font-weight: 500;" x-text="'(' + customCount() + ')'"></span>
+          </div>
+          <template x-if="customCount() === 0">
+            <div class="menu-empty" style="padding-left: 0;">No custom personas yet. Click <strong>+ Create custom</strong> below.</div>
+          </template>
+          <template x-for="(p, i) in filteredPersonas(true)" :key="'cu_' + p.id">
+            <div class="manage-row" :class="p.selected && 'selected'">
+              <div class="persona-check" :class="p.selected && 'on'" @click="p.selected = !p.selected"></div>
+              <span class="mr-icon" x-text="p.icon || '👤'"></span>
+              <div style="min-width: 0;">
+                <template x-if="!p.editing">
+                  <div>
+                    <div class="mr-name" x-text="p.archetype || p.name"></div>
+                    <div class="mr-arch" x-text="p.name"></div>
+                    <div class="mr-sheet" x-text="shortDesc(p.character_sheet)"></div>
+                  </div>
+                </template>
+                <template x-if="p.editing">
+                  <div style="display: flex; flex-direction: column; gap: 6px;">
+                    <input class="input" placeholder="Archetype" x-model="p.archetype" />
+                    <input class="input" placeholder="Name" x-model="p.name" />
+                    <input class="input" placeholder="Icon emoji" x-model="p.icon" maxlength="4" />
+                    <textarea class="input" placeholder="Character sheet…" x-model="p.character_sheet" style="min-height: 80px;"></textarea>
+                  </div>
+                </template>
+              </div>
+              <div class="mr-actions">
+                <template x-if="!p.editing">
+                  <button class="btn btn-ghost btn-xs" @click="p.editing = true">Edit</button>
+                </template>
+                <template x-if="p.editing">
+                  <button class="btn btn-secondary btn-xs" @click="p.editing = false">Done</button>
+                </template>
+                <button class="btn btn-danger btn-xs" @click="deletePersonaById(p.id)">Delete</button>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div class="modal-foot">
+          <button class="btn btn-secondary btn-sm" @click="addCustomPersona()">+ Create custom</button>
+          <button class="btn btn-ghost btn-sm" @click="resetPersonas()">Reset to defaults</button>
+          <div style="flex: 1;"></div>
+          <button class="btn btn-primary btn-sm" @click="personaModalOpen = false">Done</button>
+        </div>
+      </div>
+    </div>
   </template>
 
   <footer class="footer">

@@ -74,6 +74,11 @@ function app() {
     showAbDetails: false,
     activeCampaign: "A",
     selectedPersonaId: null,
+    menuOpen: false,
+    personaModalOpen: false,
+    personaSearch: "",
+    savedSetups: [],
+    savedRuns: [],
 
     async init() {
       try {
@@ -87,6 +92,7 @@ function app() {
       } catch (e) {
         this.errorMsg = "Failed to load personas.";
       }
+      this.refreshStorage();
     },
 
     // ================= PERSONAS =================
@@ -296,6 +302,7 @@ function app() {
         this.reportTab = "exec";
         this.activeCampaign = this.result.reports?.[0]?.campaign_label || "A";
         this.selectedPersonaId = this.result.reports?.[0]?.personas?.[0]?.persona_id || null;
+        this._saveRunToHistory();
         this.view = "report";
       } catch (e) {
         this.errorMsg = e.message || String(e);
@@ -500,7 +507,238 @@ function app() {
       return "Run at " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
     },
 
-    // ================= EXPORT =================
+    // ================= PERSONAS MODAL =================
+    builtInCount() {
+      return this.personas.filter((p) => !p.id.startsWith("custom_")).length;
+    },
+    customCount() {
+      return this.personas.filter((p) => p.id.startsWith("custom_")).length;
+    },
+    filteredPersonas(isCustom) {
+      const q = this.personaSearch.trim().toLowerCase();
+      return this.personas.filter((p) => {
+        if (isCustom !== p.id.startsWith("custom_")) return false;
+        if (!q) return true;
+        const hay = (p.name + " " + p.archetype + " " + p.character_sheet).toLowerCase();
+        return hay.includes(q);
+      });
+    },
+    deletePersonaById(id) {
+      const i = this.personas.findIndex((p) => p.id === id);
+      if (i >= 0) this.deletePersona(i);
+    },
+
+    // ================= STORAGE =================
+    SETUPS_KEY: "crowdm.setups",
+    RUNS_KEY: "crowdm.runs",
+    RUNS_CAP: 30,
+    SETUPS_CAP: 30,
+
+    refreshStorage() {
+      this.savedSetups = this._readStore(this.SETUPS_KEY);
+      this.savedRuns = this._readStore(this.RUNS_KEY);
+    },
+    _readStore(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) return [];
+        const data = JSON.parse(raw);
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    _writeStore(key, list) {
+      try {
+        localStorage.setItem(key, JSON.stringify(list));
+        return true;
+      } catch (e) {
+        this.errorMsg = "Browser storage is full. Delete an old saved setup or run first.";
+        return false;
+      }
+    },
+    relativeTime(iso) {
+      try {
+        const d = new Date(iso);
+        const diff = (Date.now() - d.getTime()) / 1000;
+        if (diff < 60) return "just now";
+        if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+        if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+        if (diff < 604800) return Math.floor(diff / 86400) + "d ago";
+        return d.toLocaleDateString();
+      } catch (e) {
+        return "";
+      }
+    },
+
+    _currentSetupPayload() {
+      return {
+        version: 1,
+        campaignA: JSON.parse(JSON.stringify(this.campaignA)),
+        campaignB: JSON.parse(JSON.stringify(this.campaignB)),
+        abEnabled: this.abEnabled,
+        selectedModel: this.selectedModel,
+        customOllamaModel: this.customOllamaModel,
+        concurrency: this.concurrency,
+        personas: this.personas.map((p) => ({
+          id: p.id,
+          name: p.name,
+          archetype: p.archetype,
+          icon: p.icon,
+          character_sheet: p.character_sheet,
+          selected: p.selected,
+        })),
+      };
+    },
+    _applySetupPayload(payload) {
+      if (!payload) return;
+      this.campaignA = payload.campaignA || emptyCampaign("A");
+      this.campaignB = payload.campaignB || emptyCampaign("B");
+      this.abEnabled = !!payload.abEnabled;
+      this.selectedModel = payload.selectedModel || "claude-opus-4-7";
+      this.customOllamaModel = payload.customOllamaModel || "";
+      this.concurrency = payload.concurrency || 4;
+      if (Array.isArray(payload.personas) && payload.personas.length > 0) {
+        this.personas = payload.personas.map((p) => ({
+          id: p.id,
+          name: p.name || "",
+          archetype: p.archetype || "",
+          icon: p.icon || "👤",
+          character_sheet: p.character_sheet || "",
+          selected: p.selected !== false,
+          editing: false,
+        }));
+      }
+      // make sure stages have uids
+      for (const stage of this.campaignA.stages) {
+        if (!stage.uid) stage.uid = uid();
+      }
+    },
+
+    newSetup() {
+      if (!confirm("Start a new simulation? Current unsaved setup will be cleared.")) return;
+      this.campaignA = emptyCampaign("A");
+      this.campaignB = emptyCampaign("B");
+      this.abEnabled = false;
+      this.errorMsg = "";
+      this.result = null;
+      this.resetPersonas();
+    },
+
+    saveCurrentSetup() {
+      const defaultName = this.campaignA.product.name || ("Campaign " + new Date().toLocaleString());
+      const name = prompt("Name this setup:", defaultName);
+      if (!name) return;
+      const now = new Date().toISOString();
+      const setup = {
+        id: "s_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+        name,
+        created_at: now,
+        updated_at: now,
+        payload: this._currentSetupPayload(),
+      };
+      const list = [setup, ...this.savedSetups].slice(0, this.SETUPS_CAP);
+      if (this._writeStore(this.SETUPS_KEY, list)) {
+        this.savedSetups = list;
+      }
+    },
+    loadSavedSetup(id) {
+      const s = this.savedSetups.find((x) => x.id === id);
+      if (!s) return;
+      if (!confirm(`Load "${s.name}"? Current setup will be replaced.`)) return;
+      this._applySetupPayload(s.payload);
+      this.errorMsg = "";
+    },
+    deleteSavedSetup(id) {
+      if (!confirm("Delete this saved setup?")) return;
+      const list = this.savedSetups.filter((s) => s.id !== id);
+      if (this._writeStore(this.SETUPS_KEY, list)) {
+        this.savedSetups = list;
+      }
+    },
+
+    _saveRunToHistory() {
+      if (!this.result) return;
+      const now = new Date().toISOString();
+      const name = (this.campaignA.product.name || "Run") + " · " + new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      const entry = {
+        id: "r_" + Date.now() + "_" + Math.random().toString(36).slice(2, 7),
+        name,
+        ran_at: now,
+        model: this.lastRunModel,
+        campaign_name: this.campaignA.product.name || "",
+        result: this.result,
+      };
+      const list = [entry, ...this.savedRuns].slice(0, this.RUNS_CAP);
+      if (this._writeStore(this.RUNS_KEY, list)) {
+        this.savedRuns = list;
+      }
+    },
+    loadSavedRun(id) {
+      const r = this.savedRuns.find((x) => x.id === id);
+      if (!r) return;
+      this.result = r.result;
+      this.lastRunModel = r.model || "";
+      this.lastRunAt = new Date(r.ran_at);
+      this.activeCampaign = r.result?.reports?.[0]?.campaign_label || "A";
+      this.selectedPersonaId = r.result?.reports?.[0]?.personas?.[0]?.persona_id || null;
+      this.reportTab = "exec";
+      this.view = "report";
+    },
+    deleteSavedRun(id) {
+      if (!confirm("Delete this run from history?")) return;
+      const list = this.savedRuns.filter((r) => r.id !== id);
+      if (this._writeStore(this.RUNS_KEY, list)) {
+        this.savedRuns = list;
+      }
+    },
+
+    // ================= IMPORT / EXPORT SETUP =================
+    exportSetup() {
+      const payload = {
+        kind: "crowdm.setup",
+        version: 1,
+        exported_at: new Date().toISOString(),
+        name: this.campaignA.product.name || "Crowdm setup",
+        setup: this._currentSetupPayload(),
+      };
+      const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const slug = (this.campaignA.product.name || "setup").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "setup";
+      a.href = url;
+      a.download = `crowdm-${slug}-${Date.now()}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+    async onImportFile(ev) {
+      const f = ev.target.files?.[0];
+      if (!f) return;
+      try {
+        const txt = await f.text();
+        const data = JSON.parse(txt);
+        let payload = null;
+        if (data?.kind === "crowdm.setup" && data.setup) {
+          payload = data.setup;
+        } else if (data?.campaignA) {
+          payload = data;
+        } else {
+          throw new Error("File is not a Crowdm setup export.");
+        }
+        if (!confirm(`Import setup "${data.name || f.name}"? Current setup will be replaced.`)) {
+          ev.target.value = "";
+          return;
+        }
+        this._applySetupPayload(payload);
+        this.errorMsg = "";
+      } catch (e) {
+        this.errorMsg = "Import failed: " + (e?.message || e);
+      } finally {
+        ev.target.value = "";
+      }
+    },
+
+    // ================= EXPORT REPORT =================
     exportReport() {
       if (!this.result) return;
       const payload = {
