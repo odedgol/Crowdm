@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crowdm — Native Ads Audience Simulator</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen">
+  <div x-data="app()" x-init="init()" class="max-w-6xl mx-auto p-6">
+    <header class="mb-6">
+      <h1 class="text-3xl font-bold tracking-tight">Crowdm</h1>
+      <p class="text-slate-600">Synthetic-audience simulator for native-ads funnels · e-commerce</p>
+      <p class="text-xs text-slate-500 mt-1" x-show="health">Model: <span x-text="health?.model"></span> · API key: <span x-text="health?.has_api_key ? 'set' : 'MISSING'"></span></p>
+    </header>
+
+    <template x-if="view === 'setup'">
+      <section>
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4">1. Product & audience</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="block"><span class="text-sm font-medium">Product name</span>
+              <input class="input" type="text" x-model="campaignA.product.name" />
+            </label>
+            <label class="block"><span class="text-sm font-medium">Price (as shown to user)</span>
+              <input class="input" type="text" x-model="campaignA.product.price" placeholder="$79, $49.99 + $5 shipping, $29/mo..." />
+            </label>
+            <label class="block md:col-span-2"><span class="text-sm font-medium">Target audience</span>
+              <input class="input" type="text" x-model="campaignA.product.target_audience" placeholder="Urban millennials who care about X and struggle with Y" />
+            </label>
+            <label class="block md:col-span-2"><span class="text-sm font-medium">Product description</span>
+              <textarea class="input h-24" x-model="campaignA.product.description" placeholder="What is the product, what does it do, why should anyone care"></textarea>
+            </label>
+          </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4">2. Ad creative</h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <label class="block"><span class="text-sm font-medium">Headline</span>
+              <input class="input" type="text" x-model="campaignA.ad.headline" />
+            </label>
+            <label class="block"><span class="text-sm font-medium">CTA button text</span>
+              <input class="input" type="text" x-model="campaignA.ad.cta" placeholder="Shop now / Learn more / Get yours" />
+            </label>
+            <label class="block md:col-span-2"><span class="text-sm font-medium">Body / subheadline</span>
+              <textarea class="input h-20" x-model="campaignA.ad.body"></textarea>
+            </label>
+            <label class="block md:col-span-2"><span class="text-sm font-medium">Ad image (optional)</span>
+              <input class="input" type="file" accept="image/*" @change="onAdImage($event, campaignA)" />
+              <template x-if="campaignA.ad.image_base64">
+                <img :src="'data:' + campaignA.ad.image_media_type + ';base64,' + campaignA.ad.image_base64" class="mt-2 max-h-40 rounded border" />
+              </template>
+            </label>
+          </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4">3. Funnel stages</h2>
+          <p class="text-sm text-slate-600 mb-4">For each stage, provide at least one of: URL (we'll fetch), pasted HTML, raw text, or a screenshot. Skip stages you don't have.</p>
+          <template x-for="(stage, i) in campaignA.stages" :key="stage.kind">
+            <div class="border rounded p-4 mb-3 bg-slate-50" x-show="stage.kind !== 'ad'">
+              <div class="flex items-center justify-between mb-2">
+                <h3 class="font-medium" x-text="stageLabel(stage.kind)"></h3>
+                <label class="text-xs text-slate-500"><input type="checkbox" x-model="stage.enabled" /> include in funnel</label>
+              </div>
+              <div x-show="stage.enabled" class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="block"><span class="text-xs font-medium">URL</span>
+                  <input class="input" type="text" x-model="stage.url" placeholder="https://..." />
+                </label>
+                <label class="block"><span class="text-xs font-medium">Screenshot (optional)</span>
+                  <input class="input" type="file" accept="image/*" @change="onStageImage($event, stage)" />
+                </label>
+                <label class="block md:col-span-2"><span class="text-xs font-medium">Pasted text (or HTML)</span>
+                  <textarea class="input h-20" x-model="stage.text" placeholder="Paste the visible page text if no URL"></textarea>
+                </label>
+                <label class="block md:col-span-2"><span class="text-xs font-medium">Advertiser notes (optional)</span>
+                  <input class="input" type="text" x-model="stage.notes" placeholder="e.g. this page has a 30s autoplay video at the top" />
+                </label>
+                <template x-if="stage.screenshot_base64">
+                  <img :src="'data:' + stage.screenshot_media_type + ';base64,' + stage.screenshot_base64" class="md:col-span-2 max-h-48 rounded border" />
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">4. Personas</h2>
+            <span class="text-sm text-slate-500" x-text="selectedPersonas.length + ' selected'"></span>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+            <template x-for="p in personas" :key="p.id">
+              <label class="flex items-start gap-2 p-2 border rounded cursor-pointer hover:bg-slate-50">
+                <input type="checkbox" :value="p.id" x-model="selectedPersonas" class="mt-1" />
+                <div>
+                  <div class="font-medium text-sm" x-text="p.name + ' — ' + p.archetype"></div>
+                  <div class="text-xs text-slate-500" x-text="p.character_sheet.slice(0, 140) + '...'"></div>
+                </div>
+              </label>
+            </template>
+          </div>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-6 mb-6">
+          <label class="flex items-center gap-2">
+            <input type="checkbox" x-model="abEnabled" />
+            <span class="font-semibold">A/B compare with a second variant</span>
+          </label>
+          <template x-if="abEnabled">
+            <div class="mt-4 space-y-3">
+              <p class="text-sm text-slate-600">Variant B uses the same product, audience, personas and stage structure. Fill in the fields you want to change; blanks inherit from variant A.</p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <label class="block"><span class="text-sm font-medium">Variant B headline</span>
+                  <input class="input" type="text" x-model="campaignB.ad.headline" />
+                </label>
+                <label class="block"><span class="text-sm font-medium">Variant B CTA</span>
+                  <input class="input" type="text" x-model="campaignB.ad.cta" />
+                </label>
+                <label class="block md:col-span-2"><span class="text-sm font-medium">Variant B body</span>
+                  <textarea class="input h-20" x-model="campaignB.ad.body"></textarea>
+                </label>
+                <label class="block md:col-span-2"><span class="text-sm font-medium">Variant B price (if different)</span>
+                  <input class="input" type="text" x-model="campaignB.product.price" />
+                </label>
+                <label class="block md:col-span-2"><span class="text-sm font-medium">Variant B ad image (optional)</span>
+                  <input class="input" type="file" accept="image/*" @change="onAdImage($event, campaignB)" />
+                </label>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button class="btn-primary" :disabled="running || !canRun()" @click="run()">
+            <span x-show="!running">Run simulation</span>
+            <span x-show="running">Simulating… <span x-text="progressNote"></span></span>
+          </button>
+          <button class="btn-secondary" @click="loadDemo()">Load demo campaign</button>
+          <span x-show="errorMsg" class="text-red-600 text-sm" x-text="errorMsg"></span>
+        </div>
+      </section>
+    </template>
+
+    <template x-if="view === 'report'">
+      <section>
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-semibold">Simulation report</h2>
+          <button class="btn-secondary" @click="view='setup'">← Back to setup</button>
+        </div>
+
+        <div class="bg-white shadow rounded-lg p-4 mb-4 text-sm text-slate-600" x-show="result?.token_usage">
+          <span class="font-medium">Token usage:</span>
+          <span x-text="JSON.stringify(result?.token_usage)"></span>
+        </div>
+
+        <template x-if="result?.ab_verdict">
+          <div class="bg-yellow-50 border border-yellow-200 rounded p-4 mb-6">
+            <h3 class="font-semibold">A/B verdict</h3>
+            <p class="text-sm mt-1">Overall winner: <strong x-text="result.ab_verdict.overall_winner"></strong></p>
+            <p class="text-sm text-slate-700 mt-1" x-text="result.ab_verdict.overall_reasoning"></p>
+            <details class="mt-2 text-sm">
+              <summary class="cursor-pointer text-slate-600">Per-persona breakdown</summary>
+              <ul class="mt-2 space-y-1">
+                <template x-for="pp in result.ab_verdict.per_persona" :key="pp.persona_id">
+                  <li><strong x-text="pp.persona_name"></strong> → <span x-text="pp.winner"></span>: <span x-text="pp.reason"></span></li>
+                </template>
+              </ul>
+            </details>
+          </div>
+        </template>
+
+        <template x-for="(report, idx) in result?.reports || []" :key="report.campaign_label + idx">
+          <div class="mb-10">
+            <h3 class="text-xl font-semibold mb-3" x-text="'Campaign: ' + report.campaign_label"></h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div class="bg-white rounded shadow p-4">
+                <div class="text-xs text-slate-500">Personas simulated</div>
+                <div class="text-2xl font-bold" x-text="report.personas.length"></div>
+              </div>
+              <div class="bg-white rounded shadow p-4">
+                <div class="text-xs text-slate-500">Reached checkout (converted)</div>
+                <div class="text-2xl font-bold" x-text="Math.round(report.conversion_rate * 100) + '%'"></div>
+              </div>
+              <div class="bg-white rounded shadow p-4">
+                <div class="text-xs text-slate-500">Top issues found</div>
+                <div class="text-2xl font-bold" x-text="report.top_issues.length"></div>
+              </div>
+            </div>
+
+            <div class="bg-white rounded shadow p-4 mb-4">
+              <h4 class="font-medium mb-2">Funnel drop-off</h4>
+              <canvas :id="'funnel-' + idx" height="100"></canvas>
+            </div>
+
+            <div class="bg-white rounded shadow p-4 mb-4">
+              <h4 class="font-medium mb-2">Top issues</h4>
+              <ol class="space-y-3">
+                <template x-for="issue in report.top_issues" :key="issue.title">
+                  <li class="border-l-4 border-red-400 pl-3">
+                    <div class="font-medium" x-text="issue.title + ' (x' + issue.frequency + ')'"></div>
+                    <div class="text-xs text-slate-500" x-text="issue.stage ? 'Stage: ' + stageLabel(issue.stage) : 'Cross-stage'"></div>
+                    <div class="text-sm mt-1 text-slate-700" x-text="'Recommendation: ' + issue.recommendation"></div>
+                    <ul class="text-xs text-slate-500 mt-1 list-disc list-inside">
+                      <template x-for="q in issue.example_quotes"><li x-text="'“' + q + '”'"></li></template>
+                    </ul>
+                  </li>
+                </template>
+              </ol>
+            </div>
+
+            <div class="bg-white rounded shadow p-4">
+              <h4 class="font-medium mb-2">Per-persona journeys</h4>
+              <template x-for="p in report.personas" :key="p.persona_id">
+                <details class="border rounded p-3 mb-2">
+                  <summary class="cursor-pointer">
+                    <strong x-text="p.persona_name + ' — ' + p.archetype"></strong>
+                    <span class="text-sm ml-2" :class="p.converted ? 'text-green-600' : 'text-red-600'"
+                          x-text="p.converted ? '✓ converted' : ('✗ dropped at ' + stageLabel(p.dropped_at))"></span>
+                  </summary>
+                  <div class="mt-2 text-sm italic text-slate-700" x-text="'“' + p.final_summary + '”'"></div>
+                  <div class="mt-3 space-y-2">
+                    <template x-for="s in p.stages" :key="s.stage">
+                      <div class="border-l-2 pl-3" :class="s.continues ? 'border-green-400' : 'border-red-400'">
+                        <div class="text-xs font-medium" x-text="stageLabel(s.stage)"></div>
+                        <div class="text-sm" x-text="s.reaction"></div>
+                        <div class="text-xs text-slate-500 mt-1" x-text="scoresLine(s.scores)"></div>
+                        <template x-if="s.drop_reason">
+                          <div class="text-xs text-red-600 mt-1">Drop reason: <span x-text="s.drop_reason"></span></div>
+                        </template>
+                      </div>
+                    </template>
+                  </div>
+                </details>
+              </template>
+            </div>
+          </div>
+        </template>
+      </section>
+    </template>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,39 @@
+{
+  "campaigns": [
+    {
+      "label": "A",
+      "product": {
+        "name": "AuroraGlow LED Sunrise Alarm",
+        "description": "Bedside alarm that simulates a 30-minute sunrise to wake you naturally. Bluetooth speaker, FM radio, USB-C charging, 20 light modes.",
+        "target_audience": "25-45 urban professionals with poor sleep quality who already use wellness apps",
+        "price": "$79 (normally $119, free shipping over $50)",
+        "vertical": "e-commerce / physical products"
+      },
+      "ad": {
+        "headline": "The Alarm That Wakes You With Sunlight, Not Sound",
+        "body": "Thousands of light sleepers finally wake up without dread. 30-min sunrise simulation. Free US shipping.",
+        "cta": "See how it works"
+      },
+      "stages": [
+        { "kind": "ad" },
+        {
+          "kind": "landing_a",
+          "text": "Finally, a morning that doesn't feel like a punishment. AuroraGlow mimics the real sunrise over 30 minutes so your body wakes naturally. 4.8 stars from 2,400 reviews. Watch 90-sec demo."
+        },
+        {
+          "kind": "structure",
+          "text": "What's in the box: AuroraGlow unit, USB-C cable, magnetic base, setup card. Specs: 20 light modes, Bluetooth 5.3 speaker, FM radio, 7-day programmable alarms, touch + app control. Warranty: 2 years. Ships in 2-3 days."
+        },
+        {
+          "kind": "price",
+          "text": "AuroraGlow LED Sunrise Alarm — $79 (was $119, save $40). Subscribe to the newsletter and save another $10 on your next order. Free US shipping. Sleep Bundle: add the pillow mist for $19 more."
+        },
+        {
+          "kind": "checkout",
+          "text": "Cart: AuroraGlow x 1 — $79. Shipping: Free. Tax: calculated next step. Total: $79. Guest checkout available. Apple Pay / Google Pay / PayPal."
+        }
+      ]
+    }
+  ],
+  "persona_ids": ["impulse_scroller", "skeptical_researcher", "budget_parent", "premium_buyer"]
+}
