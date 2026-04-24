@@ -72,6 +72,8 @@ function app() {
     lastRunModel: "",
     lastRunAt: null,
     showAbDetails: false,
+    activeCampaign: "A",
+    selectedPersonaId: null,
 
     async init() {
       try {
@@ -292,6 +294,8 @@ function app() {
         this.lastRunModel = model;
         this.lastRunAt = new Date();
         this.reportTab = "exec";
+        this.activeCampaign = this.result.reports?.[0]?.campaign_label || "A";
+        this.selectedPersonaId = this.result.reports?.[0]?.personas?.[0]?.persona_id || null;
         this.view = "report";
       } catch (e) {
         this.errorMsg = e.message || String(e);
@@ -354,8 +358,18 @@ function app() {
 
     // ================= REPORT HELPERS =================
     firstReport() { return this.result?.reports?.[0]; },
+    activeReport() {
+      const reports = this.result?.reports || [];
+      return reports.find((r) => r.campaign_label === this.activeCampaign) || reports[0];
+    },
+    selectedPersona() {
+      const r = this.activeReport();
+      if (!r || !this.selectedPersonaId) return null;
+      return r.personas.find((p) => p.persona_id === this.selectedPersonaId) || r.personas[0];
+    },
     convertedOver() {
-      const r = this.firstReport();
+      const r = this.activeReport() || this.firstReport();
+      if (!r) return "0/0";
       const n = r.personas.length;
       const converted = r.personas.filter((p) => p.converted).length;
       return `${converted}/${n}`;
@@ -379,18 +393,78 @@ function app() {
       const cost = (inp / 1e6) * p.input + (cr / 1e6) * p.cacheRead + (out / 1e6) * p.output;
       return cost.toFixed(2);
     },
-    barHeight(stage) {
-      const r = this.firstReport();
-      const n = r.personas.length || 1;
-      if (stage.entered === 0) return 30;
+    funnelBarPct(stage) {
+      const r = this.activeReport();
+      const n = r?.personas?.length || 1;
+      if (stage.entered === 0) return 8;
       const pct = (stage.continued / n) * 100;
-      return Math.max(pct, 12);
+      return Math.max(pct, 6);
     },
-    barClass(stage, i) {
+    funnelBarClass(stage, i) {
       if (stage.entered === 0) return "skipped";
       if (i === 0) return "";
-      if (i === 1) return "faded";
-      return "lightest";
+      return "step-" + Math.min(i, 4);
+    },
+    dimensionScores() {
+      const r = this.activeReport();
+      if (!r) return null;
+      const sums = { clarity: 0, trust: 0, price_fit: 0, urgency: 0, cta: 0 };
+      let n = 0;
+      for (const p of r.personas) {
+        for (const s of p.stages) {
+          sums.clarity += s.scores.clarity;
+          sums.trust += s.scores.trust;
+          sums.price_fit += s.scores.price_fit;
+          sums.urgency += s.scores.urgency;
+          sums.cta += s.scores.cta;
+          n += 1;
+        }
+      }
+      if (n === 0) return null;
+      const labels = {
+        clarity: "Clarity",
+        trust: "Trust",
+        price_fit: "Price fit",
+        urgency: "Urgency",
+        cta: "CTA",
+      };
+      const rows = Object.keys(sums).map((k) => {
+        const v = sums[k] / n;
+        const band = v < 4 ? "score-low" : v < 7 ? "score-mid" : "score-high";
+        return { key: k, label: labels[k], value: v, band };
+      });
+      rows.sort((a, b) => a.value - b.value);
+      return rows;
+    },
+    weakestDimensionHint() {
+      const rows = this.dimensionScores();
+      if (!rows || rows.length === 0) return "";
+      const weakest = rows[0];
+      if (weakest.value >= 7) return "Solid across all dimensions.";
+      return `Weakest dimension: ${weakest.label.toLowerCase()} (${weakest.value.toFixed(1)}/10). Fixing this likely unblocks the most personas.`;
+    },
+    outcomeBreakdown() {
+      const r = this.activeReport();
+      if (!r) return { converted: 0, dropped: 0, total: 0, drops: [] };
+      const buckets = new Map();
+      let converted = 0;
+      for (const p of r.personas) {
+        if (p.converted) {
+          converted += 1;
+        } else {
+          const key = p.dropped_at || "unknown";
+          buckets.set(key, (buckets.get(key) || 0) + 1);
+        }
+      }
+      const drops = Array.from(buckets.entries())
+        .map(([stage, count]) => ({ stage, count, label: this.stageLabelInReport(stage, r) }))
+        .sort((a, b) => b.count - a.count);
+      return {
+        converted,
+        dropped: r.personas.length - converted,
+        total: r.personas.length,
+        drops,
+      };
     },
     stageLabelInReport(kind, report) {
       if (!kind) return "—";
@@ -399,11 +473,13 @@ function app() {
       return match?.label || STAGE_LABELS[kind] || kind;
     },
     funnelCaption() {
-      const r = this.firstReport();
+      const r = this.activeReport() || this.firstReport();
       if (!r) return "";
-      const worst = [...r.stage_aggregates].filter((s) => s.entered > 0).sort((a, b) => b.drop_off_rate - a.drop_off_rate)[0];
-      if (!worst) return "";
-      return `Biggest drop at the ${worst.label} stage (${Math.round(worst.drop_off_rate * 100)}% leave here).`;
+      const worst = [...r.stage_aggregates]
+        .filter((s) => s.entered > 0 && s.drop_off_rate > 0)
+        .sort((a, b) => b.drop_off_rate - a.drop_off_rate)[0];
+      if (!worst) return "Every persona continued through every stage.";
+      return `Biggest drop at ${worst.label} (${Math.round(worst.drop_off_rate * 100)}% of those who reach it leave here).`;
     },
     abWinnerLabel() {
       const w = this.result?.ab_verdict?.overall_winner;
@@ -412,7 +488,8 @@ function app() {
       return "Tie";
     },
     issueContextLine(issue) {
-      return `Surfaced on ${this.stageLabelInReport(issue.stage)} across ${issue.frequency} persona${issue.frequency === 1 ? "" : "s"}.`;
+      const r = this.activeReport();
+      return `Surfaced on ${this.stageLabelInReport(issue.stage, r)} across ${issue.frequency} persona${issue.frequency === 1 ? "" : "s"}.`;
     },
     scoresLine(s) {
       if (!s) return "";
