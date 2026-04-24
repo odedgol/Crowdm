@@ -105,6 +105,12 @@ function app() {
       return `clarity ${s.clarity} · trust ${s.trust} · price_fit ${s.price_fit} · urgency ${s.urgency} · cta ${s.cta}`;
     },
 
+    formatTokens(u) {
+      if (!u) return "";
+      const fmt = (n) => (n || 0).toLocaleString();
+      return `in ${fmt(u.input_tokens)} · out ${fmt(u.output_tokens)} · cache_read ${fmt(u.cache_read_input_tokens)} · cache_create ${fmt(u.cache_creation_input_tokens)}`;
+    },
+
     async onAdImage(ev, campaign) {
       const f = ev.target.files[0];
       if (!f) return;
