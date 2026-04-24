@@ -154,6 +154,34 @@
   .footer { max-width: 1400px; margin: 0 auto; padding: 22px 28px 40px; color: var(--text-mute); font-size: 12.5px; border-top: 1px solid var(--border); }
   .footer a { color: var(--text-soft); text-decoration: none; }
   .footer a:hover { color: var(--primary); }
+
+  /* ===== PERSONA MODAL ===== */
+  .persona-check { width: 20px; height: 20px; border: 1.5px solid var(--border-strong); border-radius: 5px; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; transition: background 0.1s ease, border-color 0.1s ease; background: white; }
+  .persona-check.on { background: var(--primary); border-color: var(--primary); }
+  .persona-check.on::after { content: '✓'; color: white; font-size: 13px; font-weight: 700; }
+  .btn-danger { background: transparent; color: var(--danger); }
+  .btn-danger:hover { background: #fef2f2; }
+  .modal-backdrop { position: fixed; inset: 0; background: rgba(17,24,39,.45); backdrop-filter: blur(3px); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 64px 20px 40px; overflow-y: auto; }
+  .modal { background: var(--surface); border-radius: var(--radius-lg); box-shadow: 0 24px 60px rgba(17,24,39,.25); width: 100%; max-width: 760px; max-height: calc(100vh - 104px); display: flex; flex-direction: column; }
+  .modal-head { display: flex; align-items: center; gap: 10px; padding: 18px 22px; border-bottom: 1px solid var(--border); }
+  .modal-head h3 { margin: 0; font-size: 17px; font-weight: 700; }
+  .modal-head .spacer { flex: 1; }
+  .modal-close { background: none; border: none; cursor: pointer; font-size: 18px; color: var(--text-mute); padding: 4px 10px; border-radius: 6px; font-family: inherit; }
+  .modal-close:hover { background: var(--bg); color: var(--text); }
+  .modal-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+  .modal-foot { padding: 14px 22px; border-top: 1px solid var(--border); display: flex; gap: 10px; align-items: center; }
+  .modal-search { position: relative; margin-bottom: 14px; }
+  .modal-search .input { padding-left: 34px; }
+  .modal-search::before { content: '🔍'; position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 13px; color: var(--text-mute); }
+  .group-title { font-size: 11.5px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.05em; margin: 14px 0 8px; display: flex; align-items: center; gap: 8px; }
+  .group-title:first-child { margin-top: 0; }
+  .manage-row { display: grid; grid-template-columns: 22px 34px 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); margin-bottom: 8px; }
+  .manage-row.selected { border-color: var(--primary); background: var(--primary-50); }
+  .manage-row .mr-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--primary-50); display: inline-flex; align-items: center; justify-content: center; font-size: 17px; }
+  .manage-row .mr-name { font-weight: 600; font-size: 13.5px; }
+  .manage-row .mr-arch { color: var(--text-soft); font-size: 12px; margin-top: 1px; }
+  .manage-row .mr-sheet { color: var(--text-mute); font-size: 12px; margin-top: 4px; line-height: 1.4; }
+  .manage-row .mr-actions { display: flex; gap: 4px; }
 </style>
 </head>
 <body x-data="builderApp()" x-init="init()" x-cloak>
@@ -298,19 +326,23 @@
       <div class="card-head">
         <span class="step">4</span><h2>Personas</h2>
         <div class="spacer"></div>
-        <button class="btn btn-sm" @click="selectAllPersonas()">Select all</button>
-        <button class="btn btn-sm btn-ghost" @click="selectNone()">None</button>
+        <button class="btn btn-sm" @click="personaModalOpen = true">⚙ Manage personas</button>
       </div>
-      <div class="persona-chips">
-        <template x-for="p in personas" :key="p.id">
-          <span class="pchip" :class="!p.selected && 'off'" @click="p.selected = !p.selected">
-            <span class="ci" x-text="p.icon"></span>
-            <span x-text="p.archetype"></span>
-          </span>
-        </template>
-      </div>
+      <template x-if="selectedPersonaCount() === 0">
+        <div style="color: var(--text-mute); font-size: 13px;">No personas selected. Click <strong>Manage personas</strong> to pick.</div>
+      </template>
+      <template x-if="selectedPersonaCount() > 0">
+        <div class="persona-chips">
+          <template x-for="p in personas.filter((x) => x.selected)" :key="'pc_' + p.id">
+            <span class="pchip" @click="p.selected = false" title="Click to deselect">
+              <span class="ci" x-text="p.icon || '👤'"></span>
+              <span x-text="p.archetype || p.name"></span>
+            </span>
+          </template>
+        </div>
+      </template>
       <div class="persona-footer">
-        <span x-text="selectedPersonaCount()"></span> of <span x-text="personas.length"></span> personas selected · click a chip to toggle
+        <span x-text="selectedPersonaCount()"></span> of <span x-text="personas.length"></span> personas selected.
       </div>
     </section>
 
@@ -339,6 +371,107 @@
   </aside>
 
 </main>
+
+<!-- Personas modal -->
+<template x-if="personaModalOpen">
+  <div class="modal-backdrop" @click.self="personaModalOpen = false" @keydown.escape.window="personaModalOpen = false">
+    <div class="modal">
+      <div class="modal-head">
+        <h3>⚙ Manage personas</h3>
+        <div class="spacer"></div>
+        <span style="color: var(--text-mute); font-size: 12.5px;" x-text="selectedPersonaCount() + ' of ' + personas.length + ' selected'"></span>
+        <button class="modal-close" @click="personaModalOpen = false">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-search">
+          <input class="input" placeholder="Search personas…" x-model="personaSearch" />
+        </div>
+
+        <div class="group-title">
+          <span>Built-in</span>
+          <span style="color: var(--text-mute); font-weight: 500;" x-text="'(' + builtInCount() + ')'"></span>
+        </div>
+        <template x-for="(p, i) in filteredPersonas(false)" :key="'bi_' + p.id">
+          <div class="manage-row" :class="p.selected && 'selected'">
+            <div class="persona-check" :class="p.selected && 'on'" @click="p.selected = !p.selected"></div>
+            <span class="mr-icon" x-text="p.icon || '👤'"></span>
+            <div style="min-width: 0;">
+              <template x-if="!p.editing">
+                <div>
+                  <div class="mr-name" x-text="p.archetype || p.name"></div>
+                  <div class="mr-arch" x-text="p.name"></div>
+                  <div class="mr-sheet" x-text="shortDesc(p.character_sheet)"></div>
+                </div>
+              </template>
+              <template x-if="p.editing">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <input class="input" placeholder="Archetype" x-model="p.archetype" />
+                  <input class="input" placeholder="Name" x-model="p.name" />
+                  <input class="input" placeholder="Icon emoji" x-model="p.icon" maxlength="4" />
+                  <textarea class="input" placeholder="Character sheet…" x-model="p.character_sheet" style="min-height: 80px;"></textarea>
+                </div>
+              </template>
+            </div>
+            <div class="mr-actions">
+              <template x-if="!p.editing">
+                <button class="btn btn-ghost btn-xs" @click="p.editing = true">Edit</button>
+              </template>
+              <template x-if="p.editing">
+                <button class="btn btn-secondary btn-xs" @click="p.editing = false">Done</button>
+              </template>
+            </div>
+          </div>
+        </template>
+
+        <div class="group-title">
+          <span>Custom</span>
+          <span style="color: var(--text-mute); font-weight: 500;" x-text="'(' + customCount() + ')'"></span>
+        </div>
+        <template x-if="customCount() === 0">
+          <div class="menu-empty" style="padding-left: 0;">No custom personas yet. Click <strong>+ Create custom</strong> below.</div>
+        </template>
+        <template x-for="(p, i) in filteredPersonas(true)" :key="'cu_' + p.id">
+          <div class="manage-row" :class="p.selected && 'selected'">
+            <div class="persona-check" :class="p.selected && 'on'" @click="p.selected = !p.selected"></div>
+            <span class="mr-icon" x-text="p.icon || '👤'"></span>
+            <div style="min-width: 0;">
+              <template x-if="!p.editing">
+                <div>
+                  <div class="mr-name" x-text="p.archetype || p.name"></div>
+                  <div class="mr-arch" x-text="p.name"></div>
+                  <div class="mr-sheet" x-text="shortDesc(p.character_sheet)"></div>
+                </div>
+              </template>
+              <template x-if="p.editing">
+                <div style="display: flex; flex-direction: column; gap: 6px;">
+                  <input class="input" placeholder="Archetype" x-model="p.archetype" />
+                  <input class="input" placeholder="Name" x-model="p.name" />
+                  <input class="input" placeholder="Icon emoji" x-model="p.icon" maxlength="4" />
+                  <textarea class="input" placeholder="Character sheet…" x-model="p.character_sheet" style="min-height: 80px;"></textarea>
+                </div>
+              </template>
+            </div>
+            <div class="mr-actions">
+              <template x-if="!p.editing">
+                <button class="btn btn-ghost btn-xs" @click="p.editing = true">Edit</button>
+              </template>
+              <template x-if="p.editing">
+                <button class="btn btn-secondary btn-xs" @click="p.editing = false">Done</button>
+              </template>
+              <button class="btn btn-danger btn-xs" @click="deletePersonaById(p.id)">Delete</button>
+            </div>
+          </div>
+        </template>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-secondary btn-sm" @click="addCustomPersona()">+ Create custom</button>
+        <button class="btn btn-ghost btn-sm" @click="resetPersonas()">Reset to defaults</button>
+        <div style="flex: 1;"></div>
+        <button class="btn btn-primary btn-sm" @click="personaModalOpen = false">Done</button>
+      </div>
+    </div>
+  </div>
+</template>
 
 <div class="toast" x-show="toast" x-text="toast" x-transition x-cloak></div>
 
@@ -440,6 +573,9 @@ function builderApp() {
     abEnabled: false,
     stages: [],
     personas: [],
+    personaModalOpen: false,
+    personaSearch: "",
+    customCounter: 0,
 
     menuOpen: false,
     templatesOpen: false,
@@ -452,7 +588,7 @@ function builderApp() {
     SETUPS_KEY: "crowdm_builder.setups",
 
     init() {
-      this.personas = BUILTIN_PERSONAS.map((p, i) => ({ ...p, selected: i < 6 }));
+      this.personas = BUILTIN_PERSONAS.map((p, i) => ({ ...p, selected: i < 6, editing: false }));
       this.applyTemplate(BUILTIN_TEMPLATES.find((t) => t.id === "standard"));
       this.refreshStorage();
       // Keep _kind in sync as user edits labels, without triggering a loop.
@@ -494,6 +630,27 @@ function builderApp() {
     selectedPersonaCount() { return this.personas.filter((p) => p.selected).length; },
     selectAllPersonas() { this.personas.forEach((p) => { p.selected = true; }); },
     selectNone() { this.personas.forEach((p) => { p.selected = false; }); },
+    resetPersonas() {
+      this.personas = BUILTIN_PERSONAS.map((p, i) => ({ ...p, selected: i < 6, editing: false }));
+      this.customCounter = 0;
+    },
+    addCustomPersona() {
+      this.customCounter += 1;
+      this.personas.push({ id: "custom_" + Date.now() + "_" + this.customCounter, name: "New persona", archetype: "", character_sheet: "", icon: "👤", selected: true, editing: true });
+    },
+    deletePersona(idx) { this.personas.splice(idx, 1); },
+    deletePersonaById(id) { const i = this.personas.findIndex((p) => p.id === id); if (i >= 0) this.deletePersona(i); },
+    builtInCount() { return this.personas.filter((p) => !p.id.startsWith("custom_")).length; },
+    customCount() { return this.personas.filter((p) => p.id.startsWith("custom_")).length; },
+    filteredPersonas(isCustom) {
+      const q = this.personaSearch.trim().toLowerCase();
+      return this.personas.filter((p) => {
+        if (isCustom !== p.id.startsWith("custom_")) return false;
+        if (!q) return true;
+        return (p.name + " " + p.archetype + " " + p.character_sheet).toLowerCase().includes(q);
+      });
+    },
+    shortDesc(sheet) { if (!sheet) return ""; const s = sheet.trim(); return s.length > 90 ? s.slice(0, 90) + "…" : s; },
 
     // ========== TEMPLATES (local) ==========
     saveAsTemplate() {
@@ -554,7 +711,7 @@ function builderApp() {
       this.adB = { headline: "", body: "", cta: "" };
       this.abEnabled = false;
       this.applyTemplate(BUILTIN_TEMPLATES.find((t) => t.id === "standard"));
-      this.personas = BUILTIN_PERSONAS.map((p, i) => ({ ...p, selected: i < 6 }));
+      this.resetPersonas();
       this.showToast("Started a new setup");
     },
 
@@ -594,11 +751,11 @@ function builderApp() {
         const incoming = new Map(payload.personas.map((p) => [p.id, p]));
         this.personas = BUILTIN_PERSONAS.map((b) => {
           const inc = incoming.get(b.id);
-          return { ...b, ...(inc || {}), selected: inc ? !!inc.selected : false };
+          return { ...b, ...(inc || {}), selected: inc ? !!inc.selected : false, editing: false };
         });
         for (const p of payload.personas) {
           if (!BUILTIN_PERSONAS.find((b) => b.id === p.id)) {
-            this.personas.push({ ...p, selected: !!p.selected });
+            this.personas.push({ ...p, selected: !!p.selected, editing: false });
           }
         }
       }
