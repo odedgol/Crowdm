@@ -61,7 +61,7 @@ class Campaign(BaseModel):
 
 class SimulationRequest(BaseModel):
     campaigns: list[Campaign] = Field(..., min_length=1, max_length=2)
-    persona_ids: list[str] = Field(..., min_length=1)
+    personas: list[Persona] = Field(..., min_length=1)
     model: Optional[str] = None
 
 

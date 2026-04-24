@@ -90,18 +90,55 @@
 
         <div class="bg-white shadow rounded-lg p-6 mb-6">
           <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold">4. Personas</h2>
-            <span class="text-sm text-slate-500" x-text="selectedPersonas.length + ' selected'"></span>
+            <div>
+              <h2 class="text-xl font-semibold">4. Personas</h2>
+              <p class="text-xs text-slate-500">Edit any built-in persona to fit your audience, or add custom ones.</p>
+            </div>
+            <div class="flex items-center gap-3">
+              <span class="text-sm text-slate-500" x-text="selectedCount() + ' selected'"></span>
+              <button class="btn-secondary text-sm" @click="addCustomPersona()">+ Add custom</button>
+              <button class="btn-secondary text-sm" @click="resetPersonas()" title="Restore the default 10 e-commerce personas">Reset</button>
+            </div>
           </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-            <template x-for="p in personas" :key="p.id">
-              <label class="flex items-start gap-2 p-2 border rounded cursor-pointer hover:bg-slate-50">
-                <input type="checkbox" :value="p.id" x-model="selectedPersonas" class="mt-1" />
-                <div>
-                  <div class="font-medium text-sm" x-text="p.name + ' — ' + p.archetype"></div>
-                  <div class="text-xs text-slate-500" x-text="p.character_sheet.slice(0, 140) + '...'"></div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <template x-for="(p, i) in personas" :key="p.id">
+              <div class="border rounded p-3 bg-white" :class="p.selected ? 'border-slate-900' : 'border-slate-200'">
+                <div class="flex items-start gap-2">
+                  <input type="checkbox" x-model="p.selected" class="mt-1" />
+                  <div class="flex-1 min-w-0">
+                    <template x-if="!p.editing">
+                      <div>
+                        <div class="font-medium text-sm" x-text="p.name + ' — ' + p.archetype"></div>
+                        <div class="text-xs text-slate-500 mt-1 whitespace-pre-wrap" x-text="p.character_sheet.length > 180 ? p.character_sheet.slice(0, 180) + '…' : p.character_sheet"></div>
+                      </div>
+                    </template>
+                    <template x-if="p.editing">
+                      <div class="space-y-2">
+                        <label class="block"><span class="text-xs font-medium">Name</span>
+                          <input class="input" type="text" x-model="p.name" />
+                        </label>
+                        <label class="block"><span class="text-xs font-medium">Archetype</span>
+                          <input class="input" type="text" x-model="p.archetype" />
+                        </label>
+                        <label class="block"><span class="text-xs font-medium">Character sheet</span>
+                          <textarea class="input h-32" x-model="p.character_sheet" placeholder="Demographics, budget, skepticism level, trust triggers, common objections, what makes them buy or bounce."></textarea>
+                        </label>
+                      </div>
+                    </template>
+                  </div>
+                  <div class="flex flex-col gap-1 shrink-0">
+                    <template x-if="!p.editing">
+                      <button class="text-xs text-blue-600 hover:underline" @click="p.editing = true">Edit</button>
+                    </template>
+                    <template x-if="p.editing">
+                      <button class="text-xs text-green-700 hover:underline font-medium" @click="p.editing = false">Done</button>
+                    </template>
+                    <template x-if="p.id.startsWith('custom_')">
+                      <button class="text-xs text-red-600 hover:underline" @click="deletePersona(i)">Delete</button>
+                    </template>
+                  </div>
                 </div>
-              </label>
+              </div>
             </template>
           </div>
         </div>

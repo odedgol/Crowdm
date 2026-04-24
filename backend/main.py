@@ -12,7 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from backend.aggregator import build_ab_verdict, build_campaign_report
 from backend.models import SimulationRequest, SimulationResult
-from backend.personas import PERSONA_BANK, get_personas
+from backend.personas import PERSONA_BANK
 from backend.simulator import DEFAULT_MODEL, simulate_campaign
 
 
@@ -47,10 +47,14 @@ async def health() -> dict:
 async def simulate(req: SimulationRequest) -> SimulationResult:
     if not os.environ.get("ANTHROPIC_API_KEY"):
         raise HTTPException(status_code=400, detail="ANTHROPIC_API_KEY not set in environment")
-    try:
-        personas = get_personas(req.persona_ids)
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    personas = req.personas
+    seen_ids = set()
+    for p in personas:
+        if not p.character_sheet.strip():
+            raise HTTPException(status_code=400, detail=f"Persona {p.name!r} is missing a character sheet")
+        if p.id in seen_ids:
+            raise HTTPException(status_code=400, detail=f"Duplicate persona id: {p.id}")
+        seen_ids.add(p.id)
 
     model = req.model or DEFAULT_MODEL
     client = AsyncAnthropic()

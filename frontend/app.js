@@ -32,7 +32,8 @@ function app() {
     view: "setup",
     health: null,
     personas: [],
-    selectedPersonas: [],
+    builtInPersonas: [],
+    customCounter: 0,
     campaignA: emptyCampaign("A"),
     campaignB: emptyCampaign("B"),
     abEnabled: false,
@@ -49,8 +50,8 @@ function app() {
       } catch (e) {}
       try {
         const p = await fetch("/api/personas").then((r) => r.json());
-        this.personas = p.personas;
-        this.selectedPersonas = this.personas.slice(0, 6).map((x) => x.id);
+        this.builtInPersonas = p.personas;
+        this.resetPersonas();
       } catch (e) {
         this.errorMsg = "Failed to load personas";
       }
@@ -61,6 +62,38 @@ function app() {
       for (const s of this.campaignB.stages) {
         if (["ad", "landing_a", "price", "checkout"].includes(s.kind)) s.enabled = true;
       }
+    },
+
+    resetPersonas() {
+      this.personas = this.builtInPersonas.map((p, i) => ({
+        id: p.id,
+        name: p.name,
+        archetype: p.archetype,
+        character_sheet: p.character_sheet,
+        selected: i < 6,
+        editing: false,
+      }));
+      this.customCounter = 0;
+    },
+
+    addCustomPersona() {
+      this.customCounter += 1;
+      this.personas.push({
+        id: "custom_" + Date.now() + "_" + this.customCounter,
+        name: "New persona",
+        archetype: "",
+        character_sheet: "",
+        selected: true,
+        editing: true,
+      });
+    },
+
+    deletePersona(idx) {
+      this.personas.splice(idx, 1);
+    },
+
+    selectedCount() {
+      return this.personas.filter((p) => p.selected).length;
     },
 
     stageLabel(kind) {
@@ -89,7 +122,9 @@ function app() {
     },
 
     canRun() {
-      if (!this.selectedPersonas.length) return false;
+      if (this.selectedCount() === 0) return false;
+      const bad = this.personas.find((p) => p.selected && !p.character_sheet.trim());
+      if (bad) return false;
       if (!this.campaignA.product.name) return false;
       if (!this.campaignA.ad.headline) return false;
       const hasEnabled = this.campaignA.stages.some((s) => s.enabled);
@@ -141,7 +176,14 @@ function app() {
         }
         const payload = {
           campaigns,
-          persona_ids: this.selectedPersonas,
+          personas: this.personas
+            .filter((p) => p.selected)
+            .map((p) => ({
+              id: p.id,
+              name: p.name,
+              archetype: p.archetype,
+              character_sheet: p.character_sheet,
+            })),
         };
         const r = await fetch("/api/simulate", {
           method: "POST",
