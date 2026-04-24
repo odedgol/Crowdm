@@ -8,6 +8,7 @@ PERSONA_BANK: list[Persona] = [
         id="impulse_scroller",
         name="Maya, 28",
         archetype="Impulse scroller",
+        icon="⚡",
         character_sheet=(
             "Urban renter, browses on phone during commutes and lunch breaks. "
             "Spends $40-120 per impulse purchase when the image catches her eye. "
@@ -21,6 +22,7 @@ PERSONA_BANK: list[Persona] = [
         id="deal_hunter",
         name="Rick, 44",
         archetype="Deal hunter",
+        icon="💰",
         character_sheet=(
             "Middle-income, compares prices across 3-4 tabs before every purchase. "
             "Strong anchor on discount percentages and crossed-out MSRPs. "
@@ -34,6 +36,7 @@ PERSONA_BANK: list[Persona] = [
         id="skeptical_researcher",
         name="Dr. Priya, 51",
         archetype="Skeptical researcher",
+        icon="🔎",
         character_sheet=(
             "Professional, high income, reads reviews for 20+ minutes before buying. "
             "Ignores hype copy, looks for specs, materials, dimensions, warranty, return policy. "
@@ -47,6 +50,7 @@ PERSONA_BANK: list[Persona] = [
         id="gift_shopper",
         name="Tom, 36",
         archetype="Gift shopper",
+        icon="🎁",
         character_sheet=(
             "Shopping for partner/family, time-pressed, budget $60-200. "
             "Does not know the product category well. "
@@ -60,6 +64,7 @@ PERSONA_BANK: list[Persona] = [
         id="gadget_enthusiast",
         name="Kenji, 31",
         archetype="Gadget enthusiast",
+        icon="🛠️",
         character_sheet=(
             "Tech-forward, disposable income, buys 2-3 gadgets/month. "
             "Trust triggers: spec tables, comparison charts, YouTuber endorsements, dev/company backstory. "
@@ -72,6 +77,7 @@ PERSONA_BANK: list[Persona] = [
         id="brand_loyal",
         name="Sandra, 47",
         archetype="Brand-loyal buyer",
+        icon="⭐",
         character_sheet=(
             "Sticks to brands she knows. Will only try new brands with a strong reason. "
             "Trust triggers: established brand signals, press mentions, celebrity/influencer she recognizes, sustainability claims. "
@@ -84,6 +90,7 @@ PERSONA_BANK: list[Persona] = [
         id="budget_parent",
         name="Alicia, 39",
         archetype="Budget-constrained parent",
+        icon="👨‍👩‍👧",
         character_sheet=(
             "Two kids, tight monthly budget, $30-80 discretionary per purchase. "
             "Trust triggers: durability claims, multi-use, safety certifications, free returns. "
@@ -96,6 +103,7 @@ PERSONA_BANK: list[Persona] = [
         id="premium_buyer",
         name="Marcus, 55",
         archetype="High-AOV premium buyer",
+        icon="💎",
         character_sheet=(
             "Executive, AOV $300-1500, rarely flinches at price. "
             "Trust triggers: craftsmanship detail, materials provenance, minimalist site design, concierge-style service. "
@@ -108,6 +116,7 @@ PERSONA_BANK: list[Persona] = [
         id="first_time_buyer",
         name="Jordan, 22",
         archetype="First-time buyer",
+        icon="🌱",
         character_sheet=(
             "College student or early-career, first time considering this category. "
             "Trust triggers: beginner-friendly explanations, FAQs, social proof from peers, money-back guarantee. "
@@ -120,6 +129,7 @@ PERSONA_BANK: list[Persona] = [
         id="cart_abandoner",
         name="Elena, 33",
         archetype="Returning cart-abandoner",
+        icon="🛒",
         character_sheet=(
             "Adds to cart frequently but abandons 70% of the time. "
             "Trust triggers: visible total early (with shipping + tax estimate), guest checkout, Apple Pay / PayPal, clear return policy. "

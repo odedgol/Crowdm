@@ -17,7 +17,10 @@ from backend.models import (
     STAGE_LABELS,
 )
 from backend.prompts import CLUSTERING_PROMPT, AB_VERDICT_PROMPT
-from backend.simulator import DEFAULT_MODEL, _accumulate_usage, _extract_text, _parse_json
+from backend.llm import accumulate_usage, chat_json
+
+
+VALID_CATEGORIES = {"URGENCY", "TRUST", "PRICE", "CLARITY", "CTA", "FRICTION", "OTHER"}
 
 
 def _mean_scores(reactions_scores: list[StageScores]) -> StageScores:
@@ -36,27 +39,20 @@ def build_stage_aggregates(
     journeys: list[PersonaJourney], ordered_stages: list[StageKind]
 ) -> list[StageAggregate]:
     aggregates: list[StageAggregate] = []
-    entered_count = len(journeys)
-
     for stage in ordered_stages:
         scores_for_stage: list[StageScores] = []
         continued = 0
         entered_here = 0
         for journey in journeys:
-            reached = False
             for reaction in journey.stages:
                 if reaction.stage == stage:
-                    reached = True
                     entered_here += 1
                     scores_for_stage.append(reaction.scores)
                     if reaction.continues:
                         continued += 1
                     break
-            _ = reached
 
-        drop_rate = (
-            1 - (continued / entered_here) if entered_here > 0 else 0.0
-        )
+        drop_rate = 1 - (continued / entered_here) if entered_here > 0 else 0.0
         aggregates.append(
             StageAggregate(
                 stage=stage,
@@ -67,7 +63,6 @@ def build_stage_aggregates(
                 mean_scores=_mean_scores(scores_for_stage),
             )
         )
-        entered_count = continued
 
     return aggregates
 
@@ -79,10 +74,10 @@ def _conversion_rate(journeys: list[PersonaJourney]) -> float:
 
 
 async def cluster_top_issues(
-    client: AsyncAnthropic,
     journeys: list[PersonaJourney],
     *,
     model: str,
+    anthropic_client: AsyncAnthropic | None,
     usage_total: dict,
 ) -> list[TopIssue]:
     lines: list[str] = []
@@ -94,22 +89,26 @@ async def cluster_top_issues(
         return []
 
     user_text = CLUSTERING_PROMPT + "\n\nOBJECTIONS TO CLUSTER:\n" + "\n".join(lines)
-    message = await client.messages.create(
-        model=model,
-        max_tokens=1500,
-        messages=[{"role": "user", "content": user_text}],
-    )
-    _accumulate_usage(usage_total, message.usage)
     try:
-        data = _parse_json(_extract_text(message))
+        data, usage = await chat_json(
+            model=model,
+            max_tokens=1500,
+            system_blocks=[],
+            messages=[{"role": "user", "content": user_text}],
+            anthropic_client=anthropic_client,
+        )
     except json.JSONDecodeError:
         return []
+    accumulate_usage(usage_total, usage)
 
     issues: list[TopIssue] = []
     for item in data.get("issues", []):
         stage_val = item.get("stage")
         if stage_val not in STAGE_LABELS:
             stage_val = None
+        category = str(item.get("category", "")).upper().strip()
+        if category not in VALID_CATEGORIES:
+            category = "OTHER"
         try:
             freq = int(item.get("frequency", 0))
         except (TypeError, ValueError):
@@ -118,6 +117,7 @@ async def cluster_top_issues(
             TopIssue(
                 title=str(item.get("title", "")).strip() or "Issue",
                 stage=stage_val,
+                category=category,  # type: ignore[arg-type]
                 frequency=freq,
                 example_quotes=[str(q) for q in (item.get("example_quotes") or [])][:3],
                 recommendation=str(item.get("recommendation", "")).strip(),
@@ -130,16 +130,18 @@ async def build_campaign_report(
     campaign_label: str,
     journeys: list[PersonaJourney],
     ordered_stages: list[StageKind],
-    client: AsyncAnthropic,
     *,
     model: str,
+    anthropic_client: AsyncAnthropic | None,
     usage_total: dict,
 ) -> CampaignReport:
     return CampaignReport(
         campaign_label=campaign_label,
         personas=journeys,
         stage_aggregates=build_stage_aggregates(journeys, ordered_stages),
-        top_issues=await cluster_top_issues(client, journeys, model=model, usage_total=usage_total),
+        top_issues=await cluster_top_issues(
+            journeys, model=model, anthropic_client=anthropic_client, usage_total=usage_total
+        ),
         conversion_rate=_conversion_rate(journeys),
     )
 
@@ -147,9 +149,9 @@ async def build_campaign_report(
 async def build_ab_verdict(
     report_a: CampaignReport,
     report_b: CampaignReport,
-    client: AsyncAnthropic,
     *,
     model: str,
+    anthropic_client: AsyncAnthropic | None,
     usage_total: dict,
 ) -> ABVerdict | None:
     payload: dict[str, Any] = {
@@ -157,16 +159,17 @@ async def build_ab_verdict(
         "campaign_B": report_b.model_dump(mode="json"),
     }
     user_text = AB_VERDICT_PROMPT + "\n\nINPUT:\n" + json.dumps(payload, indent=2)
-    message = await client.messages.create(
-        model=model,
-        max_tokens=1500,
-        messages=[{"role": "user", "content": user_text}],
-    )
-    _accumulate_usage(usage_total, message.usage)
     try:
-        data = _parse_json(_extract_text(message))
+        data, usage = await chat_json(
+            model=model,
+            max_tokens=1500,
+            system_blocks=[],
+            messages=[{"role": "user", "content": user_text}],
+            anthropic_client=anthropic_client,
+        )
     except json.JSONDecodeError:
         return None
+    accumulate_usage(usage_total, usage)
 
     winner = data.get("overall_winner")
     if winner not in ("A", "B", "tie"):

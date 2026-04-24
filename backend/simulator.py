@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 import asyncio
-import json
 import os
-import re
 from typing import Any
 
 from anthropic import AsyncAnthropic
@@ -29,6 +27,11 @@ from backend.prompts import (
     ad_stage_text,
     build_stage_content_text,
 )
+from backend.llm import (
+    accumulate_usage,
+    chat_json,
+    is_ollama_model,
+)
 
 
 DEFAULT_MODEL = os.environ.get("CROWDM_MODEL", "claude-opus-4-7")
@@ -40,15 +43,17 @@ def _ephemeral() -> dict:
     return {"type": "ephemeral"}
 
 
-def _system_blocks(persona: Persona) -> list[dict]:
-    return [
-        {"type": "text", "text": EVALUATION_INSTRUCTIONS, "cache_control": _ephemeral()},
-        {"type": "text", "text": persona_system_block(persona.character_sheet), "cache_control": _ephemeral()},
-    ]
+def _system_blocks(persona: Persona, use_cache: bool) -> list[dict]:
+    b1: dict = {"type": "text", "text": EVALUATION_INSTRUCTIONS}
+    b2: dict = {"type": "text", "text": persona_system_block(persona.character_sheet)}
+    if use_cache:
+        b1["cache_control"] = _ephemeral()
+        b2["cache_control"] = _ephemeral()
+    return [b1, b2]
 
 
-def _product_block(campaign: Campaign) -> dict:
-    return {
+def _product_block(campaign: Campaign, use_cache: bool) -> dict:
+    blk: dict = {
         "type": "text",
         "text": product_context_block(
             product_name=campaign.product.name,
@@ -57,8 +62,10 @@ def _product_block(campaign: Campaign) -> dict:
             price=campaign.product.price,
             vertical=campaign.product.vertical,
         ),
-        "cache_control": _ephemeral(),
     }
+    if use_cache:
+        blk["cache_control"] = _ephemeral()
+    return blk
 
 
 def _image_block(b64: str, media_type: str | None) -> dict:
@@ -77,9 +84,12 @@ async def _stage_user_content(
     campaign: Campaign,
     stage: StageContent,
     prior_reactions: list[dict],
+    use_cache: bool,
 ) -> list[dict]:
-    content: list[dict] = [_product_block(campaign)]
+    content: list[dict] = [_product_block(campaign, use_cache)]
     content.append({"type": "text", "text": prior_journey_block(prior_reactions)})
+
+    label = stage.label or STAGE_LABELS.get(stage.kind, stage.kind)
 
     if stage.kind == "ad":
         header = stage_header("ad")
@@ -88,7 +98,7 @@ async def _stage_user_content(
         if campaign.ad.image_base64:
             content.append(_image_block(campaign.ad.image_base64, campaign.ad.image_media_type))
     else:
-        header = stage_header(stage.kind)
+        header = f"CURRENT STAGE: {label}\n\nBelow is what you actually see on this stage. React as the persona would, then return the JSON response per the instructions."
         text = await resolve_stage_text(url=stage.url, html=stage.html, text=stage.text)
         body = build_stage_content_text(text=text, notes=stage.notes, url=stage.url)
         content.append({"type": "text", "text": f"{header}\n\n{body}"})
@@ -96,66 +106,6 @@ async def _stage_user_content(
             content.append(_image_block(stage.screenshot_base64, stage.screenshot_media_type))
 
     return content
-
-
-_JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
-
-
-def _parse_json(raw: str) -> dict:
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError:
-        match = _JSON_RE.search(raw)
-        if not match:
-            raise
-        return json.loads(match.group(0))
-
-
-def _extract_text(message: Any) -> str:
-    chunks: list[str] = []
-    for block in message.content:
-        if getattr(block, "type", None) == "text":
-            chunks.append(block.text)
-    return "\n".join(chunks)
-
-
-def _accumulate_usage(usage_total: dict, usage: Any) -> None:
-    for key in ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens"):
-        val = getattr(usage, key, None) or 0
-        usage_total[key] = usage_total.get(key, 0) + val
-
-
-async def _call_claude(
-    client: AsyncAnthropic,
-    *,
-    model: str,
-    system_blocks: list[dict],
-    user_content: list[dict],
-    usage_total: dict,
-) -> dict:
-    message = await client.messages.create(
-        model=model,
-        max_tokens=MAX_TOKENS,
-        system=system_blocks,
-        messages=[{"role": "user", "content": user_content}],
-    )
-    _accumulate_usage(usage_total, message.usage)
-    raw = _extract_text(message)
-    try:
-        return _parse_json(raw)
-    except json.JSONDecodeError:
-        repair = await client.messages.create(
-            model=model,
-            max_tokens=MAX_TOKENS,
-            system=system_blocks,
-            messages=[
-                {"role": "user", "content": user_content},
-                {"role": "assistant", "content": raw},
-                {"role": "user", "content": "That response was not valid JSON. Resend ONLY the JSON object, no prose."},
-            ],
-        )
-        _accumulate_usage(usage_total, repair.usage)
-        return _parse_json(_extract_text(repair))
 
 
 def _coerce_scores(raw: dict) -> StageScores:
@@ -176,29 +126,31 @@ def _coerce_scores(raw: dict) -> StageScores:
 
 
 async def simulate_persona(
-    client: AsyncAnthropic,
     *,
     model: str,
     campaign: Campaign,
     persona: Persona,
+    anthropic_client: AsyncAnthropic | None,
     usage_total: dict,
 ) -> PersonaJourney:
-    system_blocks = _system_blocks(persona)
+    use_cache = not is_ollama_model(model)
+    system_blocks = _system_blocks(persona, use_cache)
     prior_reactions: list[dict] = []
     stage_reactions: list[StageReaction] = []
     dropped_at: StageKind | None = None
 
     for stage in campaign.stages:
         user_content = await _stage_user_content(
-            campaign=campaign, stage=stage, prior_reactions=prior_reactions
+            campaign=campaign, stage=stage, prior_reactions=prior_reactions, use_cache=use_cache
         )
-        raw = await _call_claude(
-            client,
+        raw, usage = await chat_json(
             model=model,
+            max_tokens=MAX_TOKENS,
             system_blocks=system_blocks,
-            user_content=user_content,
-            usage_total=usage_total,
+            messages=[{"role": "user", "content": user_content}],
+            anthropic_client=anthropic_client,
         )
+        accumulate_usage(usage_total, usage)
         reaction = StageReaction(
             stage=stage.kind,
             reaction=str(raw.get("reaction", "")).strip(),
@@ -216,17 +168,18 @@ async def simulate_persona(
     converted = dropped_at is None and len(stage_reactions) == len(campaign.stages)
 
     summary_content: list[dict] = [
-        _product_block(campaign),
+        _product_block(campaign, use_cache),
         {"type": "text", "text": prior_journey_block(prior_reactions)},
         {"type": "text", "text": FINAL_SUMMARY_INSTRUCTIONS},
     ]
-    summary_raw = await _call_claude(
-        client,
+    summary_raw, summary_usage = await chat_json(
         model=model,
+        max_tokens=MAX_TOKENS,
         system_blocks=system_blocks,
-        user_content=summary_content,
-        usage_total=usage_total,
+        messages=[{"role": "user", "content": summary_content}],
+        anthropic_client=anthropic_client,
     )
+    accumulate_usage(usage_total, summary_usage)
     final_summary = str(summary_raw.get("final_summary", "")).strip()
     converted_from_llm = summary_raw.get("converted")
     if isinstance(converted_from_llm, bool):
@@ -249,16 +202,22 @@ async def simulate_campaign(
     *,
     model: str | None = None,
     concurrency: int | None = None,
+    anthropic_client: AsyncAnthropic | None = None,
 ) -> tuple[list[PersonaJourney], dict]:
-    client = AsyncAnthropic()
     model = model or DEFAULT_MODEL
+    if not is_ollama_model(model) and anthropic_client is None:
+        anthropic_client = AsyncAnthropic()
     sem = asyncio.Semaphore(concurrency or DEFAULT_CONCURRENCY)
     usage_total: dict = {}
 
     async def _run(persona: Persona) -> PersonaJourney:
         async with sem:
             return await simulate_persona(
-                client, model=model, campaign=campaign, persona=persona, usage_total=usage_total
+                model=model,
+                campaign=campaign,
+                persona=persona,
+                anthropic_client=anthropic_client,
+                usage_total=usage_total,
             )
 
     journeys = await asyncio.gather(*[_run(p) for p in personas])

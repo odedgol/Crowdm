@@ -7,384 +7,503 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
-<body x-data="app()" x-init="init()">
+<body x-data="app()" x-init="init()" x-cloak>
 
-  <!-- ======== TOP BAR ======== -->
+  <!-- ==================== TOP BAR ==================== -->
   <header class="topbar">
-    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center gap-4">
-      <div class="flex items-center gap-3">
-        <span class="brand-mark">C</span>
-        <div>
-          <div class="font-semibold text-base leading-tight">Crowdm</div>
-          <div class="text-xs text-slate-500 leading-tight">Native-ads audience simulator</div>
-        </div>
+    <div class="topbar-inner">
+      <div class="brand">
+        <span class="brand-logo">👥</span>
+        <span class="brand-name">Crowdm</span>
+        <template x-if="view === 'setup'">
+          <span class="brand-sub"><span class="brand-sep">—</span> Native Ads Audience Simulator</span>
+        </template>
+        <template x-if="view === 'report'">
+          <span class="brand-sub"><span class="brand-sep">/</span> <span class="brand-sub-light">Report</span></span>
+        </template>
       </div>
 
-      <nav class="tabs ml-6">
-        <div class="tab" :class="view === 'setup' && 'active'" @click="view='setup'">Setup</div>
-        <div class="tab" :class="view === 'report' && 'active'" :disabled="!result" @click="result && (view='report')">
-          Report
-          <span x-show="result" class="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
-        </div>
-      </nav>
-
-      <div class="ml-auto flex items-center gap-2" x-show="health">
-        <a href="/mocks" class="pill" style="text-decoration: none;">UI mocks ↗</a>
-        <span class="pill">model · <span x-text="health?.model"></span></span>
-        <span class="pill" :class="health?.has_api_key ? 'pill-ok' : 'pill-bad'">
-          <span class="dot"></span>
-          <span x-text="health?.has_api_key ? 'API key set' : 'No API key'"></span>
-        </span>
+      <div class="top-actions">
+        <template x-if="view === 'setup'">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <a class="top-link" href="#config">Configuration</a>
+            <button class="btn btn-secondary" @click="loadDemo()">Load Demo Campaign</button>
+            <button class="btn btn-primary" :disabled="running || !canRun()" @click="run()">
+              <template x-if="!running"><span>Run Simulation →</span></template>
+              <template x-if="running"><span><span class="spinner"></span> Running…</span></template>
+            </button>
+            <template x-if="result">
+              <button class="btn btn-secondary" @click="view='report'">View Results</button>
+            </template>
+          </div>
+        </template>
+        <template x-if="view === 'report'">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="top-meta">
+              <div class="title" x-text="campaignA.product.name || 'Campaign report'"></div>
+              <div class="sub">
+                <span x-text="reportTimestamp()"></span>
+                <template x-if="lastRunModel"> — <span x-text="lastRunModel"></span> model</template>
+              </div>
+            </div>
+            <button class="btn btn-secondary" @click="view='setup'">← Back to Setup</button>
+            <button class="btn btn-primary" @click="exportReport()">⎋ Export Report</button>
+          </div>
+        </template>
       </div>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-6 py-8">
+  <!-- ==================== SETUP VIEW ==================== -->
+  <template x-if="view === 'setup'">
+    <main class="main-wrap">
+      <div x-show="errorMsg" class="error-banner" x-text="errorMsg"></div>
 
-    <!-- ============================ SETUP VIEW ============================ -->
-    <template x-if="view === 'setup'">
-      <section>
-        <div class="mb-6">
-          <h1 class="text-2xl font-semibold tracking-tight">New simulation</h1>
-          <p class="text-slate-500 text-sm mt-1">Walk a synthetic audience through your funnel and see where they bounce, why, and what to fix.</p>
-        </div>
+      <div class="layout-grid">
 
-        <!-- 1. Product -->
-        <div class="card">
-          <div class="flex items-center gap-3 mb-5">
-            <span class="step-badge">1</span>
-            <div>
-              <h2>Product &amp; audience</h2>
-              <p class="helper">What you're selling and who it's meant for.</p>
-            </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="label">Product name</label>
-              <input class="input" type="text" x-model="campaignA.product.name" placeholder="AuroraGlow Sunrise Alarm" />
-            </div>
-            <div>
-              <label class="label">Price (as shown to user)</label>
-              <input class="input" type="text" x-model="campaignA.product.price" placeholder="$79 (was $119) · free shipping" />
-            </div>
-            <div class="md:col-span-2">
-              <label class="label">Target audience</label>
-              <input class="input" type="text" x-model="campaignA.product.target_audience" placeholder="Urban 25-45, poor sleep, already use wellness apps" />
-            </div>
-            <div class="md:col-span-2">
-              <label class="label">Product description</label>
-              <textarea class="input h-24" x-model="campaignA.product.description" placeholder="What it is, what it does, why anyone should care."></textarea>
-            </div>
-          </div>
-        </div>
+        <!-- ========== LEFT COLUMN ========== -->
+        <div class="col-left">
 
-        <!-- 2. Ad creative -->
-        <div class="card">
-          <div class="flex items-center gap-3 mb-5">
-            <span class="step-badge">2</span>
-            <div>
-              <h2>Ad creative</h2>
-              <p class="helper">The native-ad slot the user sees on the publisher site.</p>
+          <!-- Section 1: Product & Audience -->
+          <section class="card">
+            <div class="card-head">
+              <span class="step-num">1</span>
+              <h2>Product &amp; Audience</h2>
             </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label class="label">Headline</label>
-              <input class="input" type="text" x-model="campaignA.ad.headline" />
-            </div>
-            <div>
-              <label class="label">CTA button</label>
-              <input class="input" type="text" x-model="campaignA.ad.cta" placeholder="See how it works" />
-            </div>
-            <div class="md:col-span-2">
-              <label class="label">Body / subheadline</label>
-              <textarea class="input h-20" x-model="campaignA.ad.body"></textarea>
-            </div>
-            <div class="md:col-span-2">
-              <label class="label">Ad image (optional)</label>
-              <input class="input" type="file" accept="image/*" @change="onAdImage($event, campaignA)" />
-              <template x-if="campaignA.ad.image_base64">
-                <img :src="'data:' + campaignA.ad.image_media_type + ';base64,' + campaignA.ad.image_base64" class="mt-3 max-h-40 rounded-lg border border-slate-200" />
-              </template>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. Stages -->
-        <div class="card">
-          <div class="flex items-center gap-3 mb-5">
-            <span class="step-badge">3</span>
-            <div>
-              <h2>Funnel stages</h2>
-              <p class="helper">For each stage: a URL we'll fetch, pasted text/HTML, or a screenshot. Skip stages you don't have.</p>
-            </div>
-          </div>
-          <template x-for="(stage, i) in campaignA.stages" :key="stage.kind">
-            <div class="stage-row" :class="!stage.enabled && 'is-disabled'" x-show="stage.kind !== 'ad'">
-              <div class="flex items-center justify-between mb-2">
-                <div class="font-medium text-sm" x-text="stageLabel(stage.kind)"></div>
-                <label class="text-xs text-slate-500 flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" x-model="stage.enabled" /> include
-                </label>
+            <div class="form-grid">
+              <div>
+                <label class="label">Product Name</label>
+                <input class="input" x-model="campaignA.product.name" placeholder="e.g., AuroraGlow Sunrise Alarm" />
               </div>
-              <div x-show="stage.enabled" class="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
-                <div>
-                  <label class="label">URL</label>
-                  <input class="input" type="text" x-model="stage.url" placeholder="https://..." />
+              <div>
+                <label class="label">Price (as shown to user)</label>
+                <input class="input" x-model="campaignA.product.price" placeholder="e.g., $49.99" />
+              </div>
+              <div class="full">
+                <label class="label">Target Audience</label>
+                <input class="input" x-model="campaignA.product.target_audience" placeholder="e.g., People aged 25-45 who struggle to wake up in winter." />
+              </div>
+              <div class="full">
+                <label class="label">Product Description (for context)</label>
+                <textarea class="input" x-model="campaignA.product.description" placeholder="Detailed product specifications, key benefits, and problem it solves..."></textarea>
+              </div>
+            </div>
+          </section>
+
+          <!-- Section 2: Ad Creative -->
+          <section class="card">
+            <div class="card-head">
+              <span class="step-num">2</span>
+              <h2>Ad Creative</h2>
+              <div class="card-head-spacer"></div>
+              <div class="switch-row">
+                <span>A/B Test Ad?</span>
+                <div class="switch" :class="abEnabled && 'on'" @click="abEnabled = !abEnabled"></div>
+              </div>
+            </div>
+            <div class="form-grid">
+              <div>
+                <label class="label">Headline</label>
+                <input class="input" x-model="campaignA.ad.headline" placeholder="Waking up tired is a choice." />
+              </div>
+              <div>
+                <label class="label">CTA Text</label>
+                <input class="input" x-model="campaignA.ad.cta" placeholder="Shop Now - 50% Off" />
+              </div>
+              <div class="full">
+                <label class="label">Body Text</label>
+                <textarea class="input" x-model="campaignA.ad.body" placeholder="Clinical trials show sunrise simulation improves mood..."></textarea>
+              </div>
+              <div class="full">
+                <label class="label">Optional Image Description (or upload)</label>
+                <div class="stage-input-row">
+                  <input class="input" x-model="campaignA.ad.image_description" placeholder="Describe the image (e.g., happy person waking up to warm light)" />
+                  <button class="btn btn-secondary" @click="$refs.adImage.click()">Upload Screenshot</button>
+                  <input type="file" accept="image/*" x-ref="adImage" style="display:none" @change="onAdImage($event, campaignA)" />
                 </div>
-                <div>
-                  <label class="label">Screenshot (optional)</label>
-                  <input class="input" type="file" accept="image/*" @change="onStageImage($event, stage)" />
-                </div>
-                <div class="md:col-span-2">
-                  <label class="label">Pasted text or HTML</label>
-                  <textarea class="input h-20" x-model="stage.text" placeholder="Paste the visible page text if no URL"></textarea>
-                </div>
-                <div class="md:col-span-2">
-                  <label class="label">Advertiser notes (optional)</label>
-                  <input class="input" type="text" x-model="stage.notes" placeholder="e.g. 30s autoplay video at the top" />
-                </div>
-                <template x-if="stage.screenshot_base64">
-                  <img :src="'data:' + stage.screenshot_media_type + ';base64,' + stage.screenshot_base64" class="md:col-span-2 max-h-48 rounded-lg border border-slate-200" />
+                <template x-if="campaignA.ad.image_base64">
+                  <img :src="'data:' + campaignA.ad.image_media_type + ';base64,' + campaignA.ad.image_base64" class="mt-2" style="max-height: 140px; margin-top: 8px; border-radius: 8px; border: 1px solid var(--border);" />
                 </template>
               </div>
             </div>
-          </template>
-        </div>
 
-        <!-- 4. Personas -->
-        <div class="card">
-          <div class="flex items-start gap-3 mb-5">
-            <span class="step-badge">4</span>
-            <div class="flex-1">
-              <div class="flex items-center justify-between flex-wrap gap-3">
-                <div>
-                  <h2>Personas</h2>
-                  <p class="helper">Edit the built-ins to match your audience or add custom ones.</p>
+            <template x-if="abEnabled">
+              <div style="margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border);">
+                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 12px;">
+                  <span class="stage-badge">A/B VARIANT B</span>
+                  <span style="font-size: 12.5px; color: var(--text-mute);">Leave blanks to inherit from variant A.</span>
                 </div>
-                <div class="flex items-center gap-2">
-                  <span class="pill" x-text="selectedCount() + ' selected'"></span>
-                  <button class="btn btn-secondary btn-sm" @click="addCustomPersona()">+ Add custom</button>
-                  <button class="btn btn-ghost btn-sm" @click="resetPersonas()">Reset</button>
+                <div class="form-grid">
+                  <div>
+                    <label class="label">Headline (B)</label>
+                    <input class="input" x-model="campaignB.ad.headline" />
+                  </div>
+                  <div>
+                    <label class="label">CTA Text (B)</label>
+                    <input class="input" x-model="campaignB.ad.cta" />
+                  </div>
+                  <div class="full">
+                    <label class="label">Body Text (B)</label>
+                    <textarea class="input" x-model="campaignB.ad.body"></textarea>
+                  </div>
                 </div>
               </div>
+            </template>
+          </section>
+
+          <!-- Section 3: Funnel Stages -->
+          <section class="card">
+            <div class="card-head">
+              <span class="step-num">3</span>
+              <h2>Funnel Stages</h2>
             </div>
-          </div>
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <template x-for="(p, i) in personas" :key="p.id">
-              <div class="persona-card" :class="p.selected && 'is-selected'">
-                <div class="flex items-start gap-3">
-                  <input type="checkbox" x-model="p.selected" class="mt-1 accent-indigo-600 w-4 h-4" />
-                  <div class="flex-1 min-w-0">
+            <div class="timeline">
+              <template x-for="(stage, i) in campaignA.stages" :key="stage.uid">
+                <div class="stage" :class="!stage.enabled && 'disabled'">
+                  <span class="stage-num" x-text="i + 1"></span>
+
+                  <div class="stage-head">
+                    <input class="stage-title" x-model="stage.label" :placeholder="stageDefaultLabel(stage.kind)" />
+                    <template x-if="stage.abVariant">
+                      <span class="stage-badge">A/B</span>
+                    </template>
+
+                    <template x-if="!stage.enabled">
+                      <button class="stage-enable" @click="stage.enabled = true">Enable</button>
+                    </template>
+                    <template x-if="stage.enabled">
+                      <button class="stage-close" @click="removeStage(i)" title="Remove stage">✕</button>
+                    </template>
+                  </div>
+
+                  <template x-if="!stage.enabled">
+                    <div class="stage-disabled-hint">Disabled — Skip to next enabled stage</div>
+                  </template>
+
+                  <template x-if="stage.enabled">
+                    <div class="stage-body">
+                      <div class="stage-tabs">
+                        <div class="tab-row">
+                          <div class="tab-pill" :class="stage.inputMode === 'url' && 'active'" @click="stage.inputMode = 'url'">Fetch URL</div>
+                          <div class="tab-pill" :class="stage.inputMode === 'text' && 'active'" @click="stage.inputMode = 'text'">Paste Text/HTML</div>
+                          <div class="tab-pill" :class="stage.inputMode === 'screenshot' && 'active'" @click="stage.inputMode = 'screenshot'">Screenshot</div>
+                        </div>
+                      </div>
+
+                      <template x-if="stage.inputMode === 'url'">
+                        <div>
+                          <div class="stage-input-row">
+                            <input class="input" x-model="stage.url" placeholder="https://myshopify.com/products/auroraglow" />
+                            <button class="btn btn-secondary btn-sm" @click="previewStage(stage)" :disabled="stage.previewing || !stage.url">
+                              <template x-if="!stage.previewing"><span>Preview</span></template>
+                              <template x-if="stage.previewing"><span>…</span></template>
+                            </button>
+                          </div>
+                          <template x-if="stage.preview_ok">
+                            <div class="extract-banner">✓ Text extracted successfully (<span x-text="stage.preview_words"></span> words)</div>
+                          </template>
+                          <template x-if="stage.preview_error">
+                            <div class="error-banner" style="margin-top: 8px; margin-bottom: 0;" x-text="stage.preview_error"></div>
+                          </template>
+                        </div>
+                      </template>
+
+                      <template x-if="stage.inputMode === 'text'">
+                        <textarea class="input" x-model="stage.text" placeholder="Paste the visible page text or raw HTML here..."></textarea>
+                      </template>
+
+                      <template x-if="stage.inputMode === 'screenshot'">
+                        <div>
+                          <label class="drop-zone">
+                            <template x-if="!stage.screenshot_base64">
+                              <div>Drag screenshot here or <strong>browse</strong></div>
+                            </template>
+                            <template x-if="stage.screenshot_base64">
+                              <img :src="'data:' + stage.screenshot_media_type + ';base64,' + stage.screenshot_base64" />
+                            </template>
+                            <input type="file" accept="image/*" style="display:none" @change="onStageImage($event, stage)" />
+                          </label>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
+              </template>
+
+              <button class="add-stage-btn" @click="addStage()">+ Add Funnel Stage</button>
+            </div>
+          </section>
+
+        </div>
+
+        <!-- ========== RIGHT COLUMN ========== -->
+        <div class="col-right">
+
+          <section class="card" id="config">
+            <div class="card-head">
+              <h2><span class="icon">⚙️</span> Simulation Config</h2>
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 14px;">
+              <div>
+                <label class="label">Claude Model <span class="mono">(<code>CROWDM_MODEL</code>)</span></label>
+                <select class="input" x-model="selectedModel" @change="onModelChange()">
+                  <optgroup label="Anthropic (cloud)">
+                    <option value="claude-opus-4-7">claude-opus-4-7 (High Accuracy / Cost)</option>
+                    <option value="claude-sonnet-4-6">claude-sonnet-4-6 (Balanced)</option>
+                    <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (Fast / Low Cost)</option>
+                  </optgroup>
+                  <optgroup label="Ollama (local)">
+                    <option value="ollama:llama3.3">ollama:llama3.3</option>
+                    <option value="ollama:llama3.2-vision">ollama:llama3.2-vision</option>
+                    <option value="ollama:gemma2:27b">ollama:gemma2:27b</option>
+                    <option value="ollama:qwen2.5:32b">ollama:qwen2.5:32b</option>
+                    <option value="ollama:mistral-small">ollama:mistral-small</option>
+                    <option value="__ollama_custom__">Ollama: custom model…</option>
+                  </optgroup>
+                </select>
+                <template x-if="selectedModel === '__ollama_custom__'">
+                  <div style="margin-top: 8px;">
+                    <input class="input" x-model="customOllamaModel" placeholder="e.g., gemma2:9b or deepseek-r1:8b" />
+                    <div class="hint">Prefix is added automatically. Model must be pulled locally (<code>ollama pull &lt;name&gt;</code>).</div>
+                  </div>
+                </template>
+                <template x-if="selectedModel.startsWith('ollama:')">
+                  <div class="info-hint">Using Ollama: prompt caching and image-in-prompt are skipped; Ollama server must be running locally.</div>
+                </template>
+              </div>
+
+              <div>
+                <label class="label">Concurrency <span class="mono">(<code>CROWDM_CONCURRENCY</code>)</span></label>
+                <input class="input" type="number" min="1" max="16" x-model.number="concurrency" />
+                <div class="hint">Expected calls: <strong x-text="estimatedCalls()"></strong> based on <span x-text="selectedCount()"></span> personas. Prompt caching applies.</div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <div class="card-head">
+              <span class="step-num">4</span>
+              <h2>Select Personas to Test</h2>
+            </div>
+
+            <div>
+              <template x-for="(p, i) in personas" :key="p.id">
+                <div class="persona-item" :class="p.selected && 'selected'">
+                  <span class="persona-icon" :class="personaIconClass(i)" x-text="p.icon || '👤'"></span>
+                  <div style="min-width: 0;">
                     <template x-if="!p.editing">
                       <div>
-                        <div class="name" x-text="p.name"></div>
-                        <div class="arch" x-text="p.archetype"></div>
-                        <div class="sheet" x-text="p.character_sheet.length > 180 ? p.character_sheet.slice(0, 180) + '…' : p.character_sheet"></div>
+                        <div class="name" x-text="p.archetype || p.name"></div>
+                        <div class="desc" x-text="shortDesc(p.character_sheet)"></div>
                       </div>
                     </template>
                     <template x-if="p.editing">
-                      <div class="space-y-2">
-                        <div>
-                          <label class="label">Name</label>
-                          <input class="input" type="text" x-model="p.name" />
-                        </div>
-                        <div>
-                          <label class="label">Archetype</label>
-                          <input class="input" type="text" x-model="p.archetype" />
-                        </div>
-                        <div>
-                          <label class="label">Character sheet</label>
-                          <textarea class="input h-32" x-model="p.character_sheet" placeholder="Demographics, budget, skepticism, trust triggers, common objections."></textarea>
+                      <div class="persona-edit-row">
+                        <input class="input" placeholder="Archetype" x-model="p.archetype" />
+                        <input class="input" placeholder="Name" x-model="p.name" />
+                        <textarea class="input" placeholder="Character sheet…" x-model="p.character_sheet" style="min-height: 90px;"></textarea>
+                        <div style="display: flex; gap: 6px; justify-content: flex-end;">
+                          <template x-if="p.id.startsWith('custom_')">
+                            <button class="btn btn-danger btn-xs" @click="deletePersona(i)">Delete</button>
+                          </template>
+                          <button class="btn btn-secondary btn-xs" @click="p.editing = false">Done</button>
                         </div>
                       </div>
                     </template>
                   </div>
-                  <div class="flex flex-col gap-1 shrink-0">
+                  <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 6px;">
+                    <div class="persona-check" :class="p.selected && 'on'" @click="p.selected = !p.selected"></div>
                     <template x-if="!p.editing">
-                      <button class="btn btn-ghost btn-sm" @click="p.editing = true">Edit</button>
-                    </template>
-                    <template x-if="p.editing">
-                      <button class="btn btn-ghost btn-sm" style="color: var(--success);" @click="p.editing = false">Done</button>
-                    </template>
-                    <template x-if="p.id.startsWith('custom_')">
-                      <button class="btn btn-ghost btn-sm" style="color: var(--danger);" @click="deletePersona(i)">Delete</button>
+                      <button class="btn btn-ghost btn-xs" style="padding: 2px 6px;" @click="p.editing = true">edit</button>
                     </template>
                   </div>
                 </div>
-              </div>
-            </template>
-          </div>
-        </div>
-
-        <!-- 5. A/B variant -->
-        <div class="card">
-          <label class="flex items-center gap-3 cursor-pointer">
-            <input type="checkbox" x-model="abEnabled" class="accent-indigo-600 w-4 h-4" />
-            <div>
-              <div class="font-semibold">A/B compare with a second variant</div>
-              <div class="text-xs text-slate-500">Same product &amp; funnel, change the parts you want to test.</div>
-            </div>
-          </label>
-          <template x-if="abEnabled">
-            <div class="mt-4 subtle space-y-3">
-              <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div>
-                  <label class="label">Variant B headline</label>
-                  <input class="input" type="text" x-model="campaignB.ad.headline" />
-                </div>
-                <div>
-                  <label class="label">Variant B CTA</label>
-                  <input class="input" type="text" x-model="campaignB.ad.cta" />
-                </div>
-                <div class="md:col-span-2">
-                  <label class="label">Variant B body</label>
-                  <textarea class="input h-20" x-model="campaignB.ad.body"></textarea>
-                </div>
-                <div class="md:col-span-2">
-                  <label class="label">Variant B price (if different)</label>
-                  <input class="input" type="text" x-model="campaignB.product.price" />
-                </div>
-                <div class="md:col-span-2">
-                  <label class="label">Variant B ad image (optional)</label>
-                  <input class="input" type="file" accept="image/*" @change="onAdImage($event, campaignB)" />
-                </div>
-              </div>
-            </div>
-          </template>
-        </div>
-
-        <!-- Action bar -->
-        <div class="action-bar">
-          <div class="max-w-6xl mx-auto px-0 flex flex-wrap items-center gap-3">
-            <button class="btn btn-primary" :disabled="running || !canRun()" @click="run()">
-              <template x-if="!running"><span>Run simulation →</span></template>
-              <template x-if="running">
-                <span class="flex items-center gap-2"><span class="spinner"></span><span>Running…</span></span>
               </template>
+            </div>
+
+            <div style="display: flex; gap: 6px; margin-top: 10px;">
+              <button class="btn btn-secondary btn-xs" @click="addCustomPersona()">+ Add custom</button>
+              <button class="btn btn-ghost btn-xs" @click="resetPersonas()">Reset</button>
+            </div>
+            <div class="persona-footer">
+              <span x-text="selectedCount()"></span> of <span x-text="personas.length"></span> personas selected.
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </main>
+  </template>
+
+  <!-- ==================== REPORT VIEW ==================== -->
+  <template x-if="view === 'report'">
+    <main class="report-wrap">
+      <template x-if="!result">
+        <div class="card">No simulation has been run yet.</div>
+      </template>
+
+      <template x-if="result">
+        <div>
+          <!-- Metric cards row -->
+          <div class="metrics-row">
+            <div class="metric">
+              <div class="mlabel"><span class="mico">👥</span> Personas Simulated</div>
+              <div class="mvalue" x-text="firstReport().personas.length"></div>
+            </div>
+            <div class="metric">
+              <div class="mlabel"><span class="mico">🏁</span> Overall Completion Rate</div>
+              <div class="mvalue blue">
+                <span x-text="Math.round(firstReport().conversion_rate * 100) + '%'"></span>
+                <span class="unit" x-text="'(' + convertedOver() + ')'"></span>
+              </div>
+            </div>
+            <div class="metric">
+              <div class="mlabel">Token Usage <span style="color: var(--text-mute);">(Approx Cost)</span></div>
+              <div class="mvalue">
+                ~<span x-text="formatKTokens()"></span> Tokens
+                <span class="unit" x-text="'($' + approxCost() + ')'"></span>
+              </div>
+              <span class="metric-chip" x-text="modelDisplayName()"></span>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="report-tabs">
+            <button class="report-tab" :class="reportTab === 'exec' && 'active'" @click="reportTab = 'exec'">
+              <span>📊</span> Overall Executive Summary
             </button>
-            <button class="btn btn-secondary" @click="loadDemo()">Load demo campaign</button>
-            <template x-if="result">
-              <button class="btn btn-secondary" @click="view='report'">View last results →</button>
-            </template>
-            <span x-show="errorMsg" class="text-sm text-red-600 ml-auto" x-text="errorMsg"></span>
-            <span x-show="running" class="text-xs text-slate-500 ml-auto" x-text="progressNote"></span>
+            <button class="report-tab" :class="reportTab === 'personas' && 'active'" @click="reportTab = 'personas'">
+              <span>👤</span> Detailed Persona Feedback
+            </button>
           </div>
-        </div>
-      </section>
-    </template>
 
-    <!-- ============================ REPORT VIEW ============================ -->
-    <template x-if="view === 'report'">
-      <section>
-        <div class="flex items-center justify-between mb-6">
-          <div>
-            <h1 class="text-2xl font-semibold tracking-tight">Simulation report</h1>
-            <p class="text-sm text-slate-500 mt-1" x-show="result?.token_usage">
-              Tokens: <span x-text="formatTokens(result?.token_usage)"></span>
-            </p>
-          </div>
-          <button class="btn btn-secondary" @click="view='setup'">← Back to setup</button>
-        </div>
+          <!-- Exec tab -->
+          <template x-if="reportTab === 'exec'">
+            <div>
+              <template x-if="result.ab_verdict">
+                <div class="verdict-banner">
+                  <span class="trophy">🏆</span>
+                  <div style="flex: 1;">
+                    <h3>Overall A/B Verdict: <span class="winner" x-text="abWinnerLabel()"></span></h3>
+                    <p x-text="result.ab_verdict.overall_reasoning"></p>
+                  </div>
+                  <a class="view-data" href="#" @click.prevent="showAbDetails = !showAbDetails">View Data</a>
+                </div>
+              </template>
 
-        <!-- A/B verdict -->
-        <template x-if="result?.ab_verdict">
-          <div class="card" style="background: linear-gradient(135deg, #fef3c7, #fff); border-color: #fde68a;">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="pill" style="background: #fef3c7; color: #92400e; border-color: #fcd34d;">A/B verdict</span>
-              <span class="font-semibold">Overall winner: <span x-text="result.ab_verdict.overall_winner"></span></span>
-            </div>
-            <p class="text-sm text-slate-700" x-text="result.ab_verdict.overall_reasoning"></p>
-            <details class="mt-3 text-sm">
-              <summary class="cursor-pointer text-slate-600 select-none">Per-persona breakdown</summary>
-              <ul class="mt-2 space-y-1">
-                <template x-for="pp in result.ab_verdict.per_persona" :key="pp.persona_id">
-                  <li><strong x-text="pp.persona_name"></strong> → <span x-text="pp.winner"></span>: <span class="text-slate-600" x-text="pp.reason"></span></li>
-                </template>
-              </ul>
-            </details>
-          </div>
-        </template>
+              <template x-if="showAbDetails && result.ab_verdict">
+                <div class="card" style="margin-bottom: 20px;">
+                  <h3 style="margin-top: 0; font-size: 14px;">Per-persona verdict breakdown</h3>
+                  <ul style="margin: 0; padding-left: 20px;">
+                    <template x-for="pp in result.ab_verdict.per_persona" :key="pp.persona_id">
+                      <li style="margin-bottom: 6px;">
+                        <strong x-text="pp.persona_name"></strong> → <span x-text="pp.winner"></span>:
+                        <span style="color: var(--text-soft);" x-text="pp.reason"></span>
+                      </li>
+                    </template>
+                  </ul>
+                </div>
+              </template>
 
-        <template x-for="(report, idx) in result?.reports || []" :key="report.campaign_label + idx">
-          <div class="mt-6">
-            <h2 class="text-xl font-semibold mb-4" x-text="'Campaign ' + report.campaign_label"></h2>
+              <div class="content-grid">
+                <!-- Funnel chart -->
+                <div class="card funnel-box">
+                  <h3>Funnel Stage Drop-off</h3>
+                  <div class="funnel-chart">
+                    <template x-for="(s, i) in firstReport().stage_aggregates" :key="s.stage">
+                      <div class="funnel-bar"
+                           :class="barClass(s, i)"
+                           :style="'height: ' + barHeight(s) + '%;'">
+                        <div class="bar-label" x-text="s.entered === 0 ? 'Skipped' : Math.round((s.continued / firstReport().personas.length) * 100) + '%'"></div>
+                      </div>
+                    </template>
+                  </div>
+                  <div style="display: flex; gap: 16px;">
+                    <template x-for="s in firstReport().stage_aggregates" :key="s.stage + '_foot'">
+                      <div class="funnel-foot-label" x-text="s.label"></div>
+                    </template>
+                  </div>
+                  <div class="funnel-caption" x-text="funnelCaption()"></div>
+                </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-              <div class="metric">
-                <div class="label">Personas simulated</div>
-                <div class="value" x-text="report.personas.length"></div>
-              </div>
-              <div class="metric">
-                <div class="label">Reached checkout</div>
-                <div class="value" x-text="Math.round(report.conversion_rate * 100) + '%'"></div>
-              </div>
-              <div class="metric">
-                <div class="label">Issues found</div>
-                <div class="value" x-text="report.top_issues.length"></div>
-              </div>
-            </div>
-
-            <div class="card">
-              <h3 class="font-semibold mb-3 text-sm uppercase tracking-wide text-slate-500">Funnel drop-off</h3>
-              <canvas :id="'funnel-' + idx" height="100"></canvas>
-            </div>
-
-            <div class="card">
-              <h3 class="font-semibold mb-3 text-sm uppercase tracking-wide text-slate-500">Top issues</h3>
-              <ol class="space-y-3">
-                <template x-for="issue in report.top_issues" :key="issue.title">
-                  <li class="issue-card">
-                    <div class="title" x-text="issue.title + ' · x' + issue.frequency"></div>
-                    <div class="meta" x-text="issue.stage ? 'Stage: ' + stageLabel(issue.stage) : 'Cross-stage'"></div>
-                    <div class="recom" x-text="'→ ' + issue.recommendation"></div>
-                    <ul>
-                      <template x-for="q in issue.example_quotes"><li x-text="'“' + q + '”'"></li></template>
-                    </ul>
-                  </li>
-                </template>
-              </ol>
-            </div>
-
-            <div class="card">
-              <h3 class="font-semibold mb-3 text-sm uppercase tracking-wide text-slate-500">Per-persona journeys</h3>
-              <template x-for="p in report.personas" :key="p.persona_id">
-                <details class="persona-journey mb-2">
-                  <summary class="cursor-pointer flex items-center justify-between gap-2 select-none">
-                    <span>
-                      <span class="font-semibold" x-text="p.persona_name"></span>
-                      <span class="text-slate-500 text-sm ml-1" x-text="'· ' + p.archetype"></span>
-                    </span>
-                    <span class="pill" :class="p.converted ? 'pill-ok' : 'pill-bad'"
-                          x-text="p.converted ? '✓ converted' : ('✗ dropped at ' + stageLabel(p.dropped_at))"></span>
-                  </summary>
-                  <div class="mt-3 text-sm italic text-slate-700" x-text="'“' + p.final_summary + '”'"></div>
-                  <div class="mt-3">
-                    <template x-for="s in p.stages" :key="s.stage">
-                      <div class="stage-reaction" :class="!s.continues && 'dropped'">
-                        <div class="text-xs font-medium uppercase tracking-wide text-slate-500" x-text="stageLabel(s.stage)"></div>
-                        <div class="text-sm mt-1" x-text="s.reaction"></div>
-                        <div class="text-xs text-slate-500 mt-1" x-text="scoresLine(s.scores)"></div>
-                        <template x-if="s.drop_reason">
-                          <div class="text-xs text-red-600 mt-1">Drop reason: <span x-text="s.drop_reason"></span></div>
+                <!-- Top issues -->
+                <div class="issues-box">
+                  <div class="card" style="padding: 22px 24px;">
+                    <h3>Top Issues &amp; Recommendations</h3>
+                    <template x-if="firstReport().top_issues.length === 0">
+                      <div style="color: var(--text-mute); font-size: 13px; padding: 8px 0;">No critical issues surfaced in this run.</div>
+                    </template>
+                    <template x-for="issue in firstReport().top_issues" :key="issue.title">
+                      <div class="issue-card" :class="'cat-' + (issue.category || 'OTHER')">
+                        <div class="top-row">
+                          <span class="category-chip" x-text="issue.category || 'OTHER'"></span>
+                          <span class="affects" x-text="'Affects ' + issue.frequency + ' persona' + (issue.frequency === 1 ? '' : 's')"></span>
+                        </div>
+                        <div class="title" x-text="issue.title"></div>
+                        <div class="body" x-text="issue.stage ? issueContextLine(issue) : ''"></div>
+                        <ul class="issue-quotes">
+                          <template x-for="q in issue.example_quotes"><li x-text="q"></li></template>
+                        </ul>
+                        <template x-if="issue.recommendation">
+                          <div class="rec"><b>Rec:</b> <span x-text="issue.recommendation"></span></div>
                         </template>
                       </div>
                     </template>
                   </div>
-                </details>
+                </div>
+              </div>
+            </div>
+          </template>
+
+          <!-- Persona feedback tab -->
+          <template x-if="reportTab === 'personas'">
+            <div class="pj-list">
+              <template x-for="report in result.reports" :key="report.campaign_label + '_r'">
+                <div>
+                  <template x-if="result.reports.length > 1">
+                    <h3 style="font-size: 15px; font-weight: 700; margin: 0 0 10px;">Campaign <span x-text="report.campaign_label"></span></h3>
+                  </template>
+                  <template x-for="p in report.personas" :key="p.persona_id + report.campaign_label">
+                    <div class="pj-card">
+                      <div class="pj-head">
+                        <span class="pj-icon" x-text="personaIconFor(p.persona_id)"></span>
+                        <div>
+                          <div class="pj-name" x-text="p.persona_name"></div>
+                          <div class="pj-arch" x-text="p.archetype"></div>
+                        </div>
+                        <span class="pj-status" :class="p.converted ? 'ok' : 'bad'">
+                          <template x-if="p.converted">✓ converted</template>
+                          <template x-if="!p.converted"><span x-text="'✕ dropped at ' + (stageLabelInReport(p.dropped_at, report))"></span></template>
+                        </span>
+                      </div>
+                      <div class="pj-summary" x-text="'“' + p.final_summary + '”'"></div>
+                      <template x-for="s in p.stages" :key="s.stage">
+                        <div class="stage-reaction" :class="!s.continues && 'dropped'">
+                          <div class="rlabel" x-text="stageLabelInReport(s.stage, report)"></div>
+                          <div class="rtext" x-text="s.reaction"></div>
+                          <div class="rscores" x-text="scoresLine(s.scores)"></div>
+                          <template x-if="s.drop_reason">
+                            <div class="rdrop" x-text="'Drop reason: ' + s.drop_reason"></div>
+                          </template>
+                        </div>
+                      </template>
+                    </div>
+                  </template>
+                </div>
               </template>
             </div>
-          </div>
-        </template>
-      </section>
-    </template>
+          </template>
+        </div>
+      </template>
+    </main>
+  </template>
 
-  </main>
+  <footer class="footer">
+    Crowdm — Native Ads Audience Simulator | Honest limits: Directional qualitative insight, not a CVR predictor.
+  </footer>
 
   <script src="/static/app.js"></script>
 </body>

@@ -29,6 +29,7 @@ class AdCreative(BaseModel):
 
 class StageContent(BaseModel):
     kind: StageKind
+    label: Optional[str] = None
     url: Optional[str] = None
     html: Optional[str] = None
     text: Optional[str] = None
@@ -42,6 +43,7 @@ class Persona(BaseModel):
     name: str
     archetype: str
     character_sheet: str
+    icon: Optional[str] = None
 
 
 class ProductContext(BaseModel):
@@ -63,6 +65,7 @@ class SimulationRequest(BaseModel):
     campaigns: list[Campaign] = Field(..., min_length=1, max_length=2)
     personas: list[Persona] = Field(..., min_length=1)
     model: Optional[str] = None
+    concurrency: Optional[int] = Field(default=None, ge=1, le=16)
 
 
 class StageScores(BaseModel):
@@ -101,9 +104,13 @@ class StageAggregate(BaseModel):
     mean_scores: StageScores
 
 
+IssueCategory = Literal["URGENCY", "TRUST", "PRICE", "CLARITY", "CTA", "FRICTION", "OTHER"]
+
+
 class TopIssue(BaseModel):
     title: str
     stage: Optional[StageKind] = None
+    category: IssueCategory = "OTHER"
     frequency: int
     example_quotes: list[str] = []
     recommendation: str = ""

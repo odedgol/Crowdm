@@ -102,7 +102,16 @@ def build_stage_content_text(*, text: str | None, notes: str | None, url: str | 
     return "\n\n".join(parts)
 
 
-CLUSTERING_PROMPT = """You are analyzing objections raised by a simulated synthetic audience during a native-ads funnel evaluation. Cluster the objections into 5-8 distinct recurring issues. For each cluster provide a short title, the funnel stage most associated with it (or null if cross-cutting), the number of times it was raised (frequency), 1-3 verbatim example quotes, and a concrete recommendation the advertiser could implement.
+CLUSTERING_PROMPT = """You are analyzing objections raised by a simulated synthetic audience during a native-ads funnel evaluation. Cluster the objections into 5-8 distinct recurring issues. For each cluster provide a short title, a category, the funnel stage most associated with it (or null if cross-cutting), the number of times it was raised (frequency), 1-3 verbatim example quotes, and a concrete recommendation the advertiser could implement.
+
+Categories (pick the single best fit):
+- URGENCY: artificial scarcity, countdown timers, fake deadlines
+- TRUST: credibility gaps, missing proof, sketchy design, missing reviews/about/warranty
+- PRICE: price too high, pricing confusion, hidden fees, surprise costs
+- CLARITY: unclear message, confusing copy, missing information
+- CTA: weak or unclear call-to-action, button copy, friction clicking forward
+- FRICTION: checkout problems, forced signup, slow pages, broken flow
+- OTHER: anything that does not fit the above
 
 Respond ONLY as a single valid JSON object:
 
@@ -110,6 +119,7 @@ Respond ONLY as a single valid JSON object:
   "issues": [
     {
       "title": "short title, 4-8 words",
+      "category": "URGENCY" | "TRUST" | "PRICE" | "CLARITY" | "CTA" | "FRICTION" | "OTHER",
       "stage": "ad" | "landing_a" | "landing_b" | "structure" | "price" | "checkout" | "item" | null,
       "frequency": integer,
       "example_quotes": ["verbatim-style quote", "..."],

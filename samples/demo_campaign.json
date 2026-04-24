@@ -1,4 +1,6 @@
 {
+  "model": "claude-opus-4-7",
+  "concurrency": 4,
   "campaigns": [
     {
       "label": "A",
@@ -15,21 +17,25 @@
         "cta": "See how it works"
       },
       "stages": [
-        { "kind": "ad" },
+        { "kind": "ad", "label": "Native Ad" },
         {
           "kind": "landing_a",
+          "label": "Landing Page A (Main Offer)",
           "text": "Finally, a morning that doesn't feel like a punishment. AuroraGlow mimics the real sunrise over 30 minutes so your body wakes naturally. 4.8 stars from 2,400 reviews. Watch 90-sec demo."
         },
         {
           "kind": "structure",
-          "text": "What's in the box: AuroraGlow unit, USB-C cable, magnetic base, setup card. Specs: 20 light modes, Bluetooth 5.3 speaker, FM radio, 7-day programmable alarms, touch + app control. Warranty: 2 years. Ships in 2-3 days."
+          "label": "Structure / Offer Page",
+          "text": "What's in the box: AuroraGlow unit, USB-C cable, magnetic base, setup card. Specs: 20 light modes, Bluetooth 5.3, FM radio, 7-day alarms. Warranty: 2 years. Ships in 2-3 days."
         },
         {
           "kind": "price",
-          "text": "AuroraGlow LED Sunrise Alarm — $79 (was $119, save $40). Subscribe to the newsletter and save another $10 on your next order. Free US shipping. Sleep Bundle: add the pillow mist for $19 more."
+          "label": "Price Page",
+          "text": "AuroraGlow LED Sunrise Alarm — $79 (was $119). Subscribe to the newsletter and save another $10. Free US shipping. Sleep Bundle: add pillow mist for $19 more."
         },
         {
           "kind": "checkout",
+          "label": "Checkout Page",
           "text": "Cart: AuroraGlow x 1 — $79. Shipping: Free. Tax: calculated next step. Total: $79. Guest checkout available. Apple Pay / Google Pay / PayPal."
         }
       ]
@@ -39,26 +45,30 @@
     {
       "id": "impulse_scroller",
       "name": "Maya, 28",
-      "archetype": "Impulse scroller",
-      "character_sheet": "Urban renter, browses on phone during commutes and lunch breaks. Spends $40-120 per impulse purchase when the image catches her eye. Trust triggers: clean modern photography, real-people reviews, clear shipping time. Skepticism: low on ad itself, medium once she hits price. Bounces if pages feel crowded or slow. Wants: fast gratification, visible stock, one-click checkout."
+      "archetype": "Impulse Scroller",
+      "icon": "⚡",
+      "character_sheet": "Urban renter, phone-first, $40-120 per impulse purchase. Trust triggers: clean photography, real reviews, fast shipping. Bounces on crowded pages."
     },
     {
       "id": "skeptical_researcher",
       "name": "Dr. Priya, 51",
-      "archetype": "Skeptical researcher",
-      "character_sheet": "Professional, high income, reads reviews for 20+ minutes before buying. Ignores hype copy, looks for specs, materials, dimensions, warranty, return policy. Skepticism: very high throughout. Bounces if site looks like a drop-shipper template. Wants: proof, specificity, no pressure tactics."
+      "archetype": "Skeptical Researcher",
+      "icon": "🔎",
+      "character_sheet": "Reads reviews 20+ minutes before buying. Looks for specs, warranty, return policy. Bounces if site looks like a drop-shipper template."
     },
     {
       "id": "budget_parent",
       "name": "Alicia, 39",
-      "archetype": "Budget-constrained parent",
-      "character_sheet": "Two kids, tight monthly budget, $30-80 discretionary per purchase. Trust triggers: durability, multi-use, safety, free returns. Bounces at any hint of subscription trap or hidden recurring charge. Wants: straightforward one-time purchase, long product life, no surprise fees."
+      "archetype": "Budget Parent",
+      "icon": "👨‍👩‍👧",
+      "character_sheet": "Two kids, tight budget, $30-80 discretionary. Trust triggers: durability, safety, free returns. Bounces at subscription traps or hidden charges."
     },
     {
       "id": "premium_buyer",
       "name": "Marcus, 55",
-      "archetype": "High-AOV premium buyer",
-      "character_sheet": "Executive, AOV $300-1500, rarely flinches at price. Trust triggers: craftsmanship detail, materials provenance, minimalist site design. Immediately bounces from low-rent design, pop-ups, fake countdowns. Wants: premium feel throughout, no urgency gimmicks."
+      "archetype": "Premium Buyer",
+      "icon": "💎",
+      "character_sheet": "Executive, $300-1500 AOV. Trust triggers: craftsmanship, provenance, minimalist design. Bounces from low-rent design, pop-ups, fake countdowns."
     }
   ]
 }
