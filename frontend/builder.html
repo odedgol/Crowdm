@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Crowdm Setup Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+<style>
+  :root {
+    --bg: #f7f8fa; --surface: #ffffff; --surface-2: #fafbfc;
+    --border: #e5e7eb; --border-strong: #d1d5db;
+    --text: #0f172a; --text-soft: #475569; --text-mute: #94a3b8;
+    --primary: #2563eb; --primary-600: #1d4ed8;
+    --primary-50: #eff6ff; --primary-100: #dbeafe;
+    --success: #15803d; --success-50: #f0fdf4;
+    --purple: #7c3aed; --danger: #dc2626;
+    --radius: 12px; --radius-lg: 14px;
+    --shadow: 0 1px 2px rgba(15,23,42,.04);
+  }
+  * { box-sizing: border-box; }
+  [x-cloak] { display: none !important; }
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg); color: var(--text);
+    margin: 0; -webkit-font-smoothing: antialiased;
+    font-size: 14px; line-height: 1.5;
+  }
+  .mono { font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; }
+
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 30; }
+  .topbar-inner { max-width: 1400px; margin: 0 auto; padding: 14px 28px; display: flex; align-items: center; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; }
+  .brand .logo { font-size: 20px; }
+  .brand .sub { color: var(--text-mute); font-weight: 500; font-size: 13px; }
+  .top-actions { margin-left: auto; display: flex; gap: 8px; position: relative; }
+
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 7px 14px; font-size: 13px; font-weight: 600;
+    font-family: inherit; border: 1px solid var(--border-strong);
+    border-radius: 8px; cursor: pointer;
+    background: var(--surface); color: var(--text);
+    transition: background .12s ease, border-color .12s ease;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary { background: var(--primary); color: white; border-color: var(--primary); box-shadow: 0 1px 2px rgba(37,99,235,.25); }
+  .btn-primary:hover { background: var(--primary-600); }
+  .btn-ghost { background: transparent; border-color: transparent; color: var(--text-soft); }
+  .btn-ghost:hover { background: var(--bg); color: var(--text); }
+  .btn-sm { padding: 5px 11px; font-size: 12.5px; }
+  .btn-xs { padding: 3px 8px; font-size: 11.5px; font-weight: 500; }
+
+  /* Dropdown menu */
+  .menu { position: absolute; top: calc(100% + 6px); right: 0; min-width: 300px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 12px 28px rgba(15,23,42,.14); padding: 6px; z-index: 40; max-height: 60vh; overflow: auto; }
+  .menu-item { display: flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 6px; font-size: 13px; cursor: pointer; background: none; border: none; width: 100%; text-align: left; font-family: inherit; color: var(--text); }
+  .menu-item:hover { background: var(--bg); }
+  .menu-item .ico { width: 16px; color: var(--text-mute); text-align: center; }
+  .menu-sep { height: 1px; background: var(--border); margin: 5px 4px; }
+  .menu-title { padding: 8px 11px 4px; font-size: 10.5px; font-weight: 700; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+  .menu-empty { padding: 6px 11px 10px; color: var(--text-mute); font-size: 12px; }
+  .menu-row { display: flex; align-items: center; gap: 8px; padding: 6px 11px; border-radius: 6px; cursor: pointer; }
+  .menu-row:hover { background: var(--bg); }
+  .menu-row .body { flex: 1; min-width: 0; }
+  .menu-row .t { font-size: 12.5px; font-weight: 500; }
+  .menu-row .s { font-size: 11px; color: var(--text-mute); }
+  .menu-row .del { color: var(--text-mute); font-size: 12px; padding: 2px 6px; border-radius: 4px; }
+  .menu-row .del:hover { color: var(--danger); background: #fef2f2; }
+
+  .wrap {
+    max-width: 1400px; margin: 0 auto; padding: 24px 28px 80px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(420px, 560px);
+    gap: 24px; align-items: start;
+  }
+  @media (max-width: 1120px) { .wrap { grid-template-columns: 1fr; } .json-panel { position: static !important; max-height: 480px !important; } }
+
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.01em; margin: 0 0 4px; }
+  .lede { color: var(--text-soft); font-size: 14px; margin: 0 0 22px; }
+  .lede code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 12px; border: 1px solid var(--border); }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 20px 22px; box-shadow: var(--shadow); }
+  .card + .card { margin-top: 16px; }
+  .card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+  .card-head h2 { margin: 0; font-size: 16px; font-weight: 700; }
+  .card-head .spacer { flex: 1; }
+  .step { width: 24px; height: 24px; border-radius: 7px; background: var(--primary-50); color: var(--primary); font-weight: 700; font-size: 12.5px; display: inline-flex; align-items: center; justify-content: center; }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 14px; }
+  .grid-2 .full { grid-column: 1/-1; }
+  .label { display: block; font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 5px; }
+  .input { width: 100%; background: white; border: 1px solid var(--border-strong); border-radius: 8px; padding: 8px 11px; font-size: 13.5px; font-family: inherit; color: var(--text); outline: none; }
+  .input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+  textarea.input { resize: vertical; min-height: 68px; line-height: 1.5; }
+  select.input { appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%236b7280' d='M5 6 0 0h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 11px center; padding-right: 30px; }
+
+  .switch { position: relative; width: 34px; height: 20px; background: #d1d5db; border-radius: 999px; cursor: pointer; flex-shrink: 0; }
+  .switch::after { content:''; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; background: white; border-radius: 50%; box-shadow: 0 1px 2px rgba(0,0,0,.2); transition: left .12s ease; }
+  .switch.on { background: var(--primary); }
+  .switch.on::after { left: 16px; }
+  .switch-row { display: inline-flex; align-items: center; gap: 10px; font-size: 12.5px; color: var(--text-soft); font-weight: 500; cursor: pointer; user-select: none; }
+
+  .tabs { display: inline-flex; background: var(--bg); border: 1px solid var(--border); padding: 3px; border-radius: 8px; }
+  .tab { padding: 4px 11px; font-size: 12px; font-weight: 500; color: var(--text-soft); border-radius: 5px; cursor: pointer; }
+  .tab.active { background: var(--surface); color: var(--primary); box-shadow: 0 1px 2px rgba(15,23,42,.08); }
+
+  .timeline { position: relative; padding-left: 36px; }
+  .timeline::before { content:''; position: absolute; left: 11px; top: 10px; bottom: 46px; width: 2px; background: var(--border); }
+  .stage { position: relative; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); padding: 12px 14px; margin-bottom: 10px; }
+  .stage.locked { background: var(--primary-50); border-color: var(--primary-100); }
+  .stage .num { position: absolute; left: -34px; top: 11px; width: 24px; height: 24px; border-radius: 50%; background: var(--primary); color: white; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; border: 3px solid var(--surface); }
+  .stage .head { display: flex; align-items: center; gap: 8px; }
+  .stage .title-input { flex: 1; border: none; background: transparent; font-weight: 600; font-size: 13.5px; padding: 2px 0; font-family: inherit; color: var(--text); outline: none; min-width: 0; }
+  .stage .title-input:focus { color: var(--primary); }
+  .stage .title-input:disabled { color: var(--text); }
+  .stage-actions { display: flex; gap: 2px; }
+  .stage-actions .btn-xs { padding: 3px 7px; color: var(--text-mute); background: transparent; border: none; cursor: pointer; font-family: inherit; font-size: 12px; border-radius: 4px; }
+  .stage-actions .btn-xs:hover { background: var(--bg); color: var(--text); }
+  .stage-actions .btn-xs:disabled { opacity: 0.3; cursor: not-allowed; }
+  .stage-actions .btn-xs.danger:hover { color: var(--danger); background: #fef2f2; }
+  .stage .body { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+  .stage-kind-hint { font-size: 11px; color: var(--text-mute); margin-top: 6px; }
+  .stage-kind-hint code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border); }
+  .add-stage { width: 100%; padding: 10px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: transparent; color: var(--text-soft); font-family: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+  .add-stage:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-50); }
+
+  .persona-chips { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .pchip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 5px; background: var(--primary-50); border: 1px solid var(--primary-100); color: var(--primary-600); border-radius: 999px; font-size: 12px; font-weight: 500; cursor: pointer; user-select: none; }
+  .pchip.off { background: var(--surface); border-color: var(--border); color: var(--text-mute); }
+  .pchip .ci { width: 18px; height: 18px; border-radius: 50%; background: white; display: inline-flex; align-items: center; justify-content: center; font-size: 11px; }
+  .persona-footer { color: var(--text-mute); font-size: 12px; margin-top: 10px; text-align: center; }
+
+  /* JSON panel */
+  .json-panel { position: sticky; top: 84px; max-height: calc(100vh - 104px); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
+  .json-head { display: flex; align-items: center; gap: 10px; padding: 14px 18px; border-bottom: 1px solid var(--border); background: var(--surface-2); }
+  .json-head h3 { margin: 0; font-size: 14px; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+  .json-head .valid-pill { display: inline-flex; align-items: center; gap: 4px; color: var(--success); background: var(--success-50); border: 1px solid #bbf7d0; border-radius: 999px; font-size: 11px; font-weight: 600; padding: 2px 9px; }
+  .json-head .valid-pill.bad { color: var(--danger); background: #fef2f2; border-color: #fecaca; }
+  .json-head .spacer { flex: 1; }
+  .json-body { padding: 14px 18px; overflow: auto; flex: 1; font-family: "JetBrains Mono", ui-monospace, Menlo, monospace; font-size: 12px; line-height: 1.65; color: var(--text); }
+  .json-body pre { margin: 0; white-space: pre-wrap; word-break: break-word; }
+  .k { color: var(--primary); }
+  .s { color: #0e7c3f; }
+  .n { color: var(--purple); }
+  .b { color: var(--primary-600); font-weight: 500; }
+  .x { color: var(--text-mute); font-style: italic; }
+  .json-foot { padding: 10px 18px; border-top: 1px solid var(--border); background: var(--surface-2); font-size: 11.5px; color: var(--text-mute); display: flex; gap: 14px; }
+  .json-foot span b { color: var(--text); font-weight: 600; }
+
+  .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: var(--text); color: white; padding: 9px 18px; border-radius: 999px; font-size: 13px; z-index: 100; box-shadow: 0 8px 20px rgba(15,23,42,.3); }
+
+  .footer { max-width: 1400px; margin: 0 auto; padding: 22px 28px 40px; color: var(--text-mute); font-size: 12.5px; border-top: 1px solid var(--border); }
+  .footer a { color: var(--text-soft); text-decoration: none; }
+  .footer a:hover { color: var(--primary); }
+</style>
+</head>
+<body x-data="builderApp()" x-init="init()" x-cloak>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="logo">🧰</span>
+      <span>Crowdm Setup Builder</span>
+      <span class="sub">· standalone</span>
+    </div>
+    <div class="top-actions">
+      <div style="position: relative;" @click.outside="menuOpen=false">
+        <button class="btn btn-sm" @click="menuOpen=!menuOpen">☰ Setups</button>
+        <div class="menu" x-show="menuOpen" x-cloak>
+          <button class="menu-item" @click="menuOpen=false; resetAll()"><span class="ico">＋</span> New setup</button>
+          <button class="menu-item" @click="menuOpen=false; $refs.importFile.click()"><span class="ico">⇣</span> Import from JSON…</button>
+          <button class="menu-item" @click="menuOpen=false; saveCurrentSetup()"><span class="ico">💾</span> Save current setup</button>
+          <div class="menu-sep"></div>
+          <div class="menu-title">Saved setups</div>
+          <template x-if="savedSetups.length===0"><div class="menu-empty">None yet.</div></template>
+          <template x-for="s in savedSetups" :key="s.id">
+            <div class="menu-row" @click="menuOpen=false; loadSetup(s.id)">
+              <div class="body"><div class="t" x-text="s.name"></div><div class="s" x-text="relTime(s.updated_at)"></div></div>
+              <span class="del" @click.stop="deleteSetup(s.id)">✕</span>
+            </div>
+          </template>
+        </div>
+        <input type="file" accept="application/json,.json" x-ref="importFile" style="display:none" @change="importJSON($event)" />
+      </div>
+      <button class="btn btn-sm" @click="copyJSON()" :disabled="!jsonValid()">⧉ Copy JSON</button>
+      <button class="btn btn-sm btn-primary" @click="downloadJSON()" :disabled="!jsonValid()">↓ Download JSON</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+  <div>
+    <h1>Build your Crowdm simulation</h1>
+    <p class="lede">Fill the form on the left; JSON on the right updates as you type. Download it and drop into Crowdm's <code>Menu → Import from JSON…</code></p>
+
+    <!-- 1. Product -->
+    <section class="card">
+      <div class="card-head"><span class="step">1</span><h2>Product &amp; Audience</h2></div>
+      <div class="grid-2">
+        <div><label class="label">Product Name *</label><input class="input" x-model="product.name" placeholder="e.g., AuroraGlow Sunrise Alarm" /></div>
+        <div><label class="label">Price (as shown to user)</label><input class="input" x-model="product.price" placeholder="$49.99" /></div>
+        <div class="full"><label class="label">Target Audience</label><input class="input" x-model="product.target_audience" placeholder="25-45 urban, poor sleep, uses wellness apps" /></div>
+        <div class="full"><label class="label">Description</label><textarea class="input" x-model="product.description" placeholder="What it is, what it does, why anyone should care."></textarea></div>
+      </div>
+    </section>
+
+    <!-- 2. Ad creative -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">2</span><h2>Ad Creative</h2>
+        <div class="spacer"></div>
+        <label class="switch-row"><span>A/B variant</span><div class="switch" :class="abEnabled&&'on'" @click="abEnabled=!abEnabled"></div></label>
+      </div>
+      <div class="grid-2">
+        <div><label class="label">Headline *</label><input class="input" x-model="ad.headline" placeholder="The Alarm That Wakes You With Sunlight, Not Sound" /></div>
+        <div><label class="label">CTA</label><input class="input" x-model="ad.cta" placeholder="See how it works" /></div>
+        <div class="full"><label class="label">Body</label><textarea class="input" x-model="ad.body" placeholder="Thousands of light sleepers finally wake up without dread."></textarea></div>
+      </div>
+      <template x-if="abEnabled">
+        <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
+          <div style="font-size: 11px; font-weight: 700; color: var(--primary); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 10px;">Variant B overrides <span style="color: var(--text-mute); font-weight: 500; text-transform: none; letter-spacing: 0;">— leave blank to inherit from A</span></div>
+          <div class="grid-2">
+            <div><label class="label">Headline (B)</label><input class="input" x-model="adB.headline" /></div>
+            <div><label class="label">CTA (B)</label><input class="input" x-model="adB.cta" /></div>
+            <div class="full"><label class="label">Body (B)</label><textarea class="input" x-model="adB.body"></textarea></div>
+          </div>
+        </div>
+      </template>
+    </section>
+
+    <!-- 3. Stages -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">3</span><h2>Funnel Stages</h2>
+        <div class="spacer"></div>
+        <div style="position: relative;" @click.outside="templatesOpen=false">
+          <button class="btn btn-sm" @click="templatesOpen=!templatesOpen">📋 Templates ▾</button>
+          <div class="menu" x-show="templatesOpen" x-cloak>
+            <div class="menu-title">Built-in templates</div>
+            <template x-for="t in builtinTemplates" :key="t.id">
+              <button class="menu-item" @click="templatesOpen=false; applyTemplate(t)">
+                <span class="ico" x-text="t.icon || '▪'"></span>
+                <div><div style="font-weight: 500;" x-text="t.name"></div><div style="font-size: 11px; color: var(--text-mute);" x-text="t.stages.length + ' stages · ' + t.description"></div></div>
+              </button>
+            </template>
+            <div class="menu-sep"></div>
+            <div class="menu-title">Your templates</div>
+            <template x-if="userTemplates.length===0"><div class="menu-empty">None saved yet. Click "Save as template" after building your stages.</div></template>
+            <template x-for="t in userTemplates" :key="t.id">
+              <div class="menu-row" @click="templatesOpen=false; applyTemplate(t)">
+                <div class="body"><div class="t" x-text="t.name"></div><div class="s" x-text="t.stages.length + ' stages · ' + relTime(t.created_at)"></div></div>
+                <span class="del" @click.stop="deleteTemplate(t.id)">✕</span>
+              </div>
+            </template>
+          </div>
+        </div>
+        <button class="btn btn-sm" @click="saveAsTemplate()" :disabled="stages.length===0">💾 Save as template</button>
+      </div>
+      <p style="margin: -6px 0 14px; font-size: 12.5px; color: var(--text-mute);">Edit the label of any stage. The order matters — it's how the simulation walks the funnel.</p>
+      <div class="timeline">
+        <template x-for="(stage, i) in stages" :key="stage.uid">
+          <div class="stage" :class="i===0 && 'locked'">
+            <span class="num" x-text="i+1"></span>
+            <div class="head">
+              <input class="title-input" x-model="stage.label" :placeholder="i===0 ? 'Native Ad (Main Creative)' : 'Landing page, price page, etc.'" />
+              <div class="stage-actions">
+                <button class="btn-xs" @click="moveStage(i, -1)" :disabled="i===0" title="Move up">↑</button>
+                <button class="btn-xs" @click="moveStage(i, +1)" :disabled="i===stages.length-1" title="Move down">↓</button>
+                <button class="btn-xs danger" @click="removeStage(i)" :disabled="i===0" :title="i===0 ? 'Ad stage is required' : 'Remove stage'">✕</button>
+              </div>
+            </div>
+            <template x-if="i===0">
+              <div class="stage-kind-hint">Content for this stage comes from <b>Ad Creative</b> above.</div>
+            </template>
+            <template x-if="i>0">
+              <div class="body">
+                <div class="tabs">
+                  <span class="tab" :class="stage.inputMode==='url' && 'active'" @click="stage.inputMode='url'">Fetch URL</span>
+                  <span class="tab" :class="stage.inputMode==='text' && 'active'" @click="stage.inputMode='text'">Paste Text/HTML</span>
+                  <span class="tab" :class="stage.inputMode==='notes' && 'active'" @click="stage.inputMode='notes'">Notes only</span>
+                </div>
+                <template x-if="stage.inputMode==='url'"><input class="input mono" x-model="stage.url" placeholder="https://..." /></template>
+                <template x-if="stage.inputMode==='text'"><textarea class="input" x-model="stage.text" placeholder="Paste the visible page text here..." style="min-height: 72px;"></textarea></template>
+                <template x-if="stage.inputMode==='notes'"><input class="input" x-model="stage.notes" placeholder="e.g. has 30s autoplay video at top" /></template>
+                <div class="stage-kind-hint">Schema kind (auto): <code x-text="stage._kind"></code></div>
+              </div>
+            </template>
+          </div>
+        </template>
+        <button class="add-stage" @click="addStage()">+ Add Funnel Stage</button>
+      </div>
+    </section>
+
+    <!-- 4. Personas -->
+    <section class="card">
+      <div class="card-head">
+        <span class="step">4</span><h2>Personas</h2>
+        <div class="spacer"></div>
+        <button class="btn btn-sm" @click="selectAllPersonas()">Select all</button>
+        <button class="btn btn-sm btn-ghost" @click="selectNone()">None</button>
+      </div>
+      <div class="persona-chips">
+        <template x-for="p in personas" :key="p.id">
+          <span class="pchip" :class="!p.selected && 'off'" @click="p.selected = !p.selected">
+            <span class="ci" x-text="p.icon"></span>
+            <span x-text="p.archetype"></span>
+          </span>
+        </template>
+      </div>
+      <div class="persona-footer">
+        <span x-text="selectedPersonaCount()"></span> of <span x-text="personas.length"></span> personas selected · click a chip to toggle
+      </div>
+    </section>
+
+    <!-- 5. Config -->
+    <section class="card">
+      <div class="card-head"><span class="step">5</span><h2>Model &amp; Concurrency</h2></div>
+      <div class="grid-2">
+        <div class="full">
+          <label class="label">Model</label>
+          <select class="input" x-model="selectedModel">
+            <optgroup label="Anthropic (cloud)">
+              <option value="claude-opus-4-7">claude-opus-4-7 (High Accuracy / Cost)</option>
+              <option value="claude-sonnet-4-6">claude-sonnet-4-6 (Balanced)</option>
+              <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (Fast / Low Cost)</option>
+            </optgroup>
+            <optgroup label="Ollama (local)">
+              <option value="ollama:llama3.3">ollama:llama3.3</option>
+              <option value="ollama:llama3.2-vision">ollama:llama3.2-vision</option>
+              <option value="ollama:gemma2:27b">ollama:gemma2:27b</option>
+              <option value="__ollama_custom__">Ollama: custom model…</option>
+            </optgroup>
+          </select>
+          <template x-if="selectedModel==='__ollama_custom__'">
+            <div style="margin-top: 8px;"><input class="input mono" x-model="customOllamaModel" placeholder="e.g., gemma2:9b" /></div>
+          </template>
+        </div>
+        <div><label class="label">Concurrency</label><input class="input" type="number" min="1" max="16" x-model.number="concurrency" /></div>
+        <div style="display: flex; align-items: end;"><div style="font-size: 12px; color: var(--text-mute);">Expected calls: <b x-text="estimatedCalls()"></b></div></div>
+      </div>
+    </section>
+
+  </div>
+
+  <!-- RIGHT: JSON PANEL -->
+  <aside class="json-panel">
+    <div class="json-head">
+      <h3>📄 Live JSON</h3>
+      <span class="valid-pill" :class="!jsonValid() && 'bad'">
+        <span x-text="jsonValid() ? '● Valid' : '● ' + validationIssue()"></span>
+      </span>
+      <div class="spacer"></div>
+      <button class="btn btn-sm" @click="copyJSON()" :disabled="!jsonValid()">⧉ Copy</button>
+      <button class="btn btn-sm btn-primary" @click="downloadJSON()" :disabled="!jsonValid()">↓ Download</button>
+    </div>
+    <div class="json-body">
+      <pre x-html="highlightedJSON()"></pre>
+    </div>
+    <div class="json-foot">
+      <span><b x-text="selectedPersonaCount()"></b> personas</span>
+      <span><b x-text="stages.length"></b> stages</span>
+      <span><b x-text="abEnabled ? 2 : 1"></b> campaign<span x-show="abEnabled">s</span></span>
+      <span style="margin-left:auto;"><b x-text="jsonSizeLabel()"></b></span>
+    </div>
+  </aside>
+
+</main>
+
+<div class="toast" x-show="toast" x-text="toast" x-transition x-cloak></div>
+
+<footer class="footer">
+  Crowdm Setup Builder · Local-only — your data never leaves this page · <a href="/">← back to Crowdm</a>
+</footer>
+<script>
+const BUILTIN_PERSONAS = [
+  { id: "impulse_scroller", name: "Maya, 28", archetype: "Impulse scroller", icon: "⚡", character_sheet: "Urban renter, phone-first, spends $40-120 per impulse purchase when the image catches her eye. Trust triggers: clean photography, real-people reviews, fast shipping. Bounces on crowded or slow pages. Wants fast gratification, visible stock, one-click checkout." },
+  { id: "deal_hunter", name: "Rick, 44", archetype: "Deal hunter", icon: "💰", character_sheet: "Middle-income, compares prices across 3-4 tabs before buying. Strong anchor on discount percentages. Suspicious of fake countdowns. Bounces if discount reasoning feels fake. Wants math that adds up and no surprise checkout fees." },
+  { id: "skeptical_researcher", name: "Dr. Priya, 51", archetype: "Skeptical researcher", icon: "🔎", character_sheet: "Professional, reads reviews 20+ minutes before buying. Looks for specs, warranty, return policy. Assumes claims are exaggerated. Bounces if site looks like a drop-shipper template. Wants proof, specificity, no pressure tactics." },
+  { id: "gift_shopper", name: "Tom, 36", archetype: "Gift shopper", icon: "🎁", character_sheet: "Shopping for partner/family, time-pressed, budget $60-200. Doesn't know the category well. Trust triggers: easy returns, delivery by a specific date, gift receipts. Bounces on vague delivery dates." },
+  { id: "gadget_enthusiast", name: "Kenji, 31", archetype: "Gadget enthusiast", icon: "🛠️", character_sheet: "Tech-forward, buys 2-3 gadgets/month. Trust triggers: spec tables, comparison charts, YouTuber endorsements. Bounces if product page lacks technical depth. Wants innovation angle, specs, community." },
+  { id: "brand_loyal", name: "Sandra, 47", archetype: "Brand-loyal buyer", icon: "⭐", character_sheet: "Sticks to brands she knows. Will only try new brands with a strong reason. Trust triggers: press mentions, established brand signals, sustainability. Bounces if brand story is missing." },
+  { id: "budget_parent", name: "Alicia, 39", archetype: "Budget-constrained parent", icon: "👨‍👩‍👧", character_sheet: "Two kids, tight monthly budget, $30-80 discretionary per purchase. Trust triggers: durability, multi-use, safety, free returns. Bounces at any hint of subscription trap or hidden charge." },
+  { id: "premium_buyer", name: "Marcus, 55", archetype: "High-AOV premium buyer", icon: "💎", character_sheet: "Executive, AOV $300-1500, rarely flinches at price. Trust triggers: craftsmanship, materials provenance, minimalist design. Bounces from low-rent design, pop-ups, fake countdowns." },
+  { id: "first_time_buyer", name: "Jordan, 22", archetype: "First-time buyer", icon: "🌱", character_sheet: "College student or early-career, first time considering this category. Trust triggers: beginner-friendly explanations, FAQs, peer social proof, money-back guarantee. Bounces on jargon-heavy copy." },
+  { id: "cart_abandoner", name: "Elena, 33", archetype: "Returning cart-abandoner", icon: "🛒", character_sheet: "Adds to cart frequently, abandons 70% of the time. High skepticism at checkout. Trust triggers: visible total early, guest checkout, Apple Pay / PayPal. Bounces on forced account creation or surprise fees." }
+];
+
+const BUILTIN_TEMPLATES = [
+  { id: "blank", name: "Blank — just the ad", icon: "▫", description: "No funnel pages yet", stages: [
+    { label: "Native Ad" }
+  ]},
+  { id: "short", name: "Quick test (3 stages)", icon: "⚡", description: "Fastest directional read", stages: [
+    { label: "Native Ad" },
+    { label: "Landing Page" },
+    { label: "Checkout Page" }
+  ]},
+  { id: "standard", name: "Standard e-commerce (5 stages)", icon: "🛍", description: "Ad → Landing → Offer → Price → Checkout", stages: [
+    { label: "Native Ad" },
+    { label: "Landing Page (Main Offer)" },
+    { label: "Product / Offer Page" },
+    { label: "Price Page" },
+    { label: "Checkout Page" }
+  ]},
+  { id: "full", name: "Full funnel (7 stages)", icon: "📊", description: "Every stage including A/B landers and item page", stages: [
+    { label: "Native Ad" },
+    { label: "Landing Page A" },
+    { label: "Landing Page B" },
+    { label: "Structure / Offer Page" },
+    { label: "Price Page" },
+    { label: "Checkout Page" },
+    { label: "Item / Product Page" }
+  ]},
+  { id: "advertorial", name: "Advertorial (5 stages)", icon: "📰", description: "Classic native-ad advertorial flow", stages: [
+    { label: "Native Ad" },
+    { label: "Advertorial (Story Page)" },
+    { label: "Offer / Pitch Page" },
+    { label: "Price & Guarantee" },
+    { label: "Checkout Page" }
+  ]}
+];
+
+const STAGE_KINDS = ["landing_a", "landing_b", "structure", "price", "checkout", "item"];
+const KEYWORD_MAP = [
+  { kw: "landing", kind: "landing_a" },
+  { kw: "lander", kind: "landing_a" },
+  { kw: "advertor", kind: "landing_a" },
+  { kw: "story", kind: "landing_a" },
+  { kw: "offer", kind: "structure" },
+  { kw: "structure", kind: "structure" },
+  { kw: "pitch", kind: "structure" },
+  { kw: "price", kind: "price" },
+  { kw: "pricing", kind: "price" },
+  { kw: "guarantee", kind: "price" },
+  { kw: "checkout", kind: "checkout" },
+  { kw: "cart", kind: "checkout" },
+  { kw: "item", kind: "item" },
+  { kw: "product", kind: "item" }
+];
+
+function uid() { return "s" + Math.random().toString(36).slice(2, 9); }
+
+function assignKinds(stages) {
+  const used = new Set();
+  return stages.map((s, i) => {
+    if (i === 0) { used.add("ad"); return { ...s, _kind: "ad" }; }
+    const lbl = (s.label || "").toLowerCase();
+    let kind = null;
+    for (const { kw, kind: k } of KEYWORD_MAP) {
+      if (lbl.includes(kw) && !used.has(k)) { kind = k; break; }
+    }
+    if (!kind) kind = STAGE_KINDS.find((k) => !used.has(k)) || "landing_a";
+    used.add(kind);
+    return { ...s, _kind: kind };
+  });
+}
+
+function emptyStage(label) {
+  return { uid: uid(), label: label || "", url: "", text: "", notes: "", inputMode: "url", _kind: "landing_a" };
+}
+
+function builderApp() {
+  return {
+    product: { name: "", description: "", target_audience: "", price: "", vertical: "e-commerce / physical products" },
+    ad: { headline: "", body: "", cta: "", image_description: "" },
+    adB: { headline: "", body: "", cta: "" },
+    abEnabled: false,
+    stages: [],
+    personas: [],
+    selectedModel: "claude-opus-4-7",
+    customOllamaModel: "",
+    concurrency: 4,
+
+    menuOpen: false,
+    templatesOpen: false,
+    toast: "",
+    userTemplates: [],
+    savedSetups: [],
+    builtinTemplates: BUILTIN_TEMPLATES,
+
+    TEMPLATES_KEY: "crowdm_builder.stage_templates",
+    SETUPS_KEY: "crowdm_builder.setups",
+
+    init() {
+      this.personas = BUILTIN_PERSONAS.map((p, i) => ({ ...p, selected: i < 6 }));
+      this.applyTemplate(BUILTIN_TEMPLATES.find((t) => t.id === "standard"));
+      this.refreshStorage();
+      // Keep _kind in sync as user edits labels, without triggering a loop.
+      this.$watch("stages", () => {
+        const recomputed = assignKinds(this.stages);
+        for (let i = 0; i < this.stages.length; i++) {
+          const want = recomputed[i]?._kind;
+          if (want && this.stages[i]._kind !== want) {
+            this.stages[i]._kind = want;
+          }
+        }
+      }, { deep: true });
+    },
+
+    // ========== STAGES ==========
+    addStage() {
+      this.stages.push(emptyStage(""));
+      this.stages = assignKinds(this.stages);
+    },
+    removeStage(i) {
+      if (i === 0) return;
+      this.stages.splice(i, 1);
+      this.stages = assignKinds(this.stages);
+    },
+    moveStage(i, dir) {
+      const j = i + dir;
+      if (j < 0 || j >= this.stages.length) return;
+      if (i === 0 || j === 0) return;
+      const tmp = this.stages[i]; this.stages[i] = this.stages[j]; this.stages[j] = tmp;
+      this.stages = assignKinds(this.stages);
+    },
+    applyTemplate(t) {
+      if (!t) return;
+      this.stages = assignKinds(t.stages.map((s) => ({ ...emptyStage(s.label), ...s, uid: uid() })));
+      this.showToast(`Applied template: ${t.name}`);
+    },
+
+    // ========== PERSONAS ==========
+    selectedPersonaCount() { return this.personas.filter((p) => p.selected).length; },
+    selectAllPersonas() { this.personas.forEach((p) => { p.selected = true; }); },
+    selectNone() { this.personas.forEach((p) => { p.selected = false; }); },
+
+    // ========== TEMPLATES (local) ==========
+    saveAsTemplate() {
+      const name = prompt("Name this stage template:", this.product.name ? `${this.product.name} funnel` : "My funnel");
+      if (!name) return;
+      const t = {
+        id: "u_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        name,
+        created_at: new Date().toISOString(),
+        stages: this.stages.map((s) => ({ label: s.label })),
+      };
+      const list = [t, ...this.userTemplates].slice(0, 30);
+      this._writeStore(this.TEMPLATES_KEY, list);
+      this.userTemplates = list;
+      this.showToast(`Template saved: ${name}`);
+    },
+    deleteTemplate(id) {
+      if (!confirm("Delete this template?")) return;
+      const list = this.userTemplates.filter((t) => t.id !== id);
+      this._writeStore(this.TEMPLATES_KEY, list);
+      this.userTemplates = list;
+    },
+
+    // ========== SETUPS (local) ==========
+    saveCurrentSetup() {
+      const name = prompt("Name this setup:", this.product.name || "Untitled setup");
+      if (!name) return;
+      const now = new Date().toISOString();
+      const entry = {
+        id: "s_" + Date.now() + "_" + Math.random().toString(36).slice(2, 6),
+        name,
+        created_at: now, updated_at: now,
+        payload: this._snapshot(),
+      };
+      const list = [entry, ...this.savedSetups].slice(0, 30);
+      this._writeStore(this.SETUPS_KEY, list);
+      this.savedSetups = list;
+      this.showToast(`Setup saved: ${name}`);
+    },
+    loadSetup(id) {
+      const s = this.savedSetups.find((x) => x.id === id);
+      if (!s) return;
+      if (!confirm(`Load "${s.name}"? Current setup will be replaced.`)) return;
+      this._restore(s.payload);
+      this.showToast(`Loaded: ${s.name}`);
+    },
+    deleteSetup(id) {
+      if (!confirm("Delete this saved setup?")) return;
+      const list = this.savedSetups.filter((s) => s.id !== id);
+      this._writeStore(this.SETUPS_KEY, list);
+      this.savedSetups = list;
+    },
+
+    resetAll() {
+      if (!confirm("Start a new setup? Current fields will be cleared.")) return;
+      this.product = { name: "", description: "", target_audience: "", price: "", vertical: "e-commerce / physical products" };
+      this.ad = { headline: "", body: "", cta: "", image_description: "" };
+      this.adB = { headline: "", body: "", cta: "" };
+      this.abEnabled = false;
+      this.applyTemplate(BUILTIN_TEMPLATES.find((t) => t.id === "standard"));
+      this.personas = BUILTIN_PERSONAS.map((p, i) => ({ ...p, selected: i < 6 }));
+      this.selectedModel = "claude-opus-4-7";
+      this.customOllamaModel = "";
+      this.concurrency = 4;
+      this.showToast("Started a new setup");
+    },
+
+    // ========== STORAGE PRIMITIVES ==========
+    refreshStorage() {
+      this.userTemplates = this._readStore(this.TEMPLATES_KEY);
+      this.savedSetups = this._readStore(this.SETUPS_KEY);
+    },
+    _readStore(key) {
+      try { const raw = localStorage.getItem(key); if (!raw) return []; const d = JSON.parse(raw); return Array.isArray(d) ? d : []; }
+      catch (e) { return []; }
+    },
+    _writeStore(key, list) {
+      try { localStorage.setItem(key, JSON.stringify(list)); return true; }
+      catch (e) { this.showToast("Browser storage full — delete something first."); return false; }
+    },
+
+    // ========== SNAPSHOT / RESTORE ==========
+    _snapshot() {
+      return {
+        product: JSON.parse(JSON.stringify(this.product)),
+        ad: JSON.parse(JSON.stringify(this.ad)),
+        adB: JSON.parse(JSON.stringify(this.adB)),
+        abEnabled: this.abEnabled,
+        stages: JSON.parse(JSON.stringify(this.stages)),
+        personas: this.personas.map((p) => ({ ...p })),
+        selectedModel: this.selectedModel,
+        customOllamaModel: this.customOllamaModel,
+        concurrency: this.concurrency,
+      };
+    },
+    _restore(payload) {
+      if (!payload) return;
+      this.product = payload.product || this.product;
+      this.ad = payload.ad || this.ad;
+      this.adB = payload.adB || { headline: "", body: "", cta: "" };
+      this.abEnabled = !!payload.abEnabled;
+      this.stages = assignKinds((payload.stages || []).map((s) => ({ ...emptyStage(), ...s, uid: s.uid || uid() })));
+      if (Array.isArray(payload.personas) && payload.personas.length) {
+        const incoming = new Map(payload.personas.map((p) => [p.id, p]));
+        this.personas = BUILTIN_PERSONAS.map((b) => {
+          const inc = incoming.get(b.id);
+          return { ...b, ...(inc || {}), selected: inc ? !!inc.selected : false };
+        });
+        for (const p of payload.personas) {
+          if (!BUILTIN_PERSONAS.find((b) => b.id === p.id)) {
+            this.personas.push({ ...p, selected: !!p.selected });
+          }
+        }
+      }
+      this.selectedModel = payload.selectedModel || "claude-opus-4-7";
+      this.customOllamaModel = payload.customOllamaModel || "";
+      this.concurrency = payload.concurrency || 4;
+    },
+
+    // ========== OUTPUT JSON (Crowdm-import shape) ==========
+    effectiveModel() {
+      if (this.selectedModel === "__ollama_custom__") {
+        const m = this.customOllamaModel.trim();
+        return m.startsWith("ollama:") ? m : "ollama:" + m;
+      }
+      return this.selectedModel;
+    },
+    _buildCampaign(label, adSource) {
+      const stagePayload = this.stages.map((s) => {
+        const base = { kind: s._kind, label: s.label || null };
+        if (s.inputMode === "url" && s.url) base.url = s.url;
+        if (s.inputMode === "text" && s.text) base.text = s.text;
+        if (s.inputMode === "notes" && s.notes) base.notes = s.notes;
+        return base;
+      });
+      return {
+        label,
+        product: { ...this.product },
+        ad: {
+          headline: adSource.headline || "",
+          body: adSource.body || "",
+          cta: adSource.cta || "",
+          image_description: adSource.image_description || "",
+          image_base64: null,
+          image_media_type: null,
+        },
+        stages: stagePayload,
+      };
+    },
+    outputJSON() {
+      const campaignA = this._buildCampaign("A", this.ad);
+      let campaignB = null;
+      if (this.abEnabled) {
+        const merged = {
+          headline: this.adB.headline || this.ad.headline,
+          body: this.adB.body || this.ad.body,
+          cta: this.adB.cta || this.ad.cta,
+          image_description: this.ad.image_description,
+        };
+        campaignB = this._buildCampaign("B", merged);
+      }
+      return {
+        version: 1,
+        campaignA,
+        campaignB,
+        abEnabled: this.abEnabled,
+        selectedModel: this.effectiveModel(),
+        customOllamaModel: this.customOllamaModel || "",
+        concurrency: this.concurrency || 4,
+        personas: this.personas.map((p) => ({
+          id: p.id,
+          name: p.name,
+          archetype: p.archetype,
+          icon: p.icon,
+          character_sheet: p.character_sheet,
+          selected: !!p.selected,
+        })),
+      };
+    },
+
+    jsonValid() { return this.validationIssue() === ""; },
+    validationIssue() {
+      if (!this.product.name.trim()) return "Product name required";
+      if (!this.ad.headline.trim()) return "Ad headline required";
+      if (this.stages.length === 0) return "Add at least one stage";
+      if (this.selectedModel === "__ollama_custom__" && !this.customOllamaModel.trim()) return "Enter Ollama model name";
+      if (this.selectedPersonaCount() === 0) return "Select at least one persona";
+      return "";
+    },
+
+    highlightedJSON() {
+      const obj = this.outputJSON();
+      const raw = JSON.stringify(obj, null, 2);
+      // escape HTML first
+      const esc = raw.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+      return esc
+        .replace(/"([^"\\]*(?:\\.[^"\\]*)*)"(\s*:)/g, '<span class="k">"$1"</span>$2')
+        .replace(/:\s*"([^"\\]*(?:\\.[^"\\]*)*)"/g, ': <span class="s">"$1"</span>')
+        .replace(/:\s*(-?\d+(?:\.\d+)?)(,?\n)/g, ': <span class="n">$1</span>$2')
+        .replace(/:\s*(true|false)(,?\n)/g, ': <span class="b">$1</span>$2')
+        .replace(/:\s*(null)(,?\n)/g, ': <span class="x">$1</span>$2');
+    },
+    jsonSizeLabel() {
+      const b = new Blob([JSON.stringify(this.outputJSON())]).size;
+      return b < 1024 ? b + " B" : (b / 1024).toFixed(1) + " KB";
+    },
+    estimatedCalls() {
+      const n = this.selectedPersonaCount() * (this.stages.length + 1) * (this.abEnabled ? 2 : 1);
+      return "~" + n;
+    },
+
+    // ========== I/O ==========
+    copyJSON() {
+      const txt = JSON.stringify(this.outputJSON(), null, 2);
+      navigator.clipboard.writeText(txt).then(() => this.showToast("Copied to clipboard")).catch(() => this.showToast("Copy failed"));
+    },
+    downloadJSON() {
+      const blob = new Blob([JSON.stringify(this.outputJSON(), null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      const slug = (this.product.name || "crowdm-setup").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "crowdm-setup";
+      a.href = url; a.download = `${slug}-${Date.now()}.json`; a.click();
+      URL.revokeObjectURL(url);
+      this.showToast("Downloaded JSON");
+    },
+    async importJSON(ev) {
+      const f = ev.target.files?.[0];
+      if (!f) return;
+      try {
+        const data = JSON.parse(await f.text());
+        // Accept either the builder's own snapshot shape OR Crowdm-import shape
+        let payload = data;
+        if (data.kind === "crowdm.setup" && data.setup) payload = data.setup;
+        if (payload.campaignA) {
+          const compat = {
+            product: payload.campaignA.product,
+            ad: payload.campaignA.ad,
+            adB: payload.campaignB?.ad ? { headline: payload.campaignB.ad.headline, body: payload.campaignB.ad.body, cta: payload.campaignB.ad.cta } : this.adB,
+            abEnabled: !!payload.abEnabled,
+            stages: (payload.campaignA.stages || []).map((s) => ({
+              label: s.label || "",
+              url: s.url || "",
+              text: s.text || "",
+              notes: s.notes || "",
+              inputMode: s.url ? "url" : (s.text ? "text" : "notes"),
+            })),
+            personas: payload.personas || [],
+            selectedModel: payload.selectedModel || "claude-opus-4-7",
+            customOllamaModel: payload.customOllamaModel || "",
+            concurrency: payload.concurrency || 4,
+          };
+          this._restore(compat);
+          this.showToast(`Imported: ${f.name}`);
+        } else {
+          throw new Error("Not a Crowdm setup JSON.");
+        }
+      } catch (e) {
+        this.showToast("Import failed: " + (e?.message || e));
+      } finally {
+        ev.target.value = "";
+      }
+    },
+
+    // ========== UI helpers ==========
+    relTime(iso) {
+      try {
+        const d = new Date(iso);
+        const diff = (Date.now() - d.getTime()) / 1000;
+        if (diff < 60) return "just now";
+        if (diff < 3600) return Math.floor(diff / 60) + "m ago";
+        if (diff < 86400) return Math.floor(diff / 3600) + "h ago";
+        if (diff < 604800) return Math.floor(diff / 86400) + "d ago";
+        return d.toLocaleDateString();
+      } catch (e) { return ""; }
+    },
+    showToast(msg) {
+      this.toast = msg;
+      setTimeout(() => { this.toast = ""; }, 2400);
+    },
+  };
+}
+</script>
+</body>
+</html>

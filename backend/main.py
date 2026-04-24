@@ -146,3 +146,7 @@ if FRONTEND_DIR.exists():
     @app.get("/mocks")
     async def mocks_redirect() -> RedirectResponse:
         return RedirectResponse(url="/static/mocks/index.html")
+
+    @app.get("/builder")
+    async def builder_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/static/builder.html")
