@@ -7,7 +7,7 @@ from pathlib import Path
 from anthropic import AsyncAnthropic
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from backend.aggregator import build_ab_verdict, build_campaign_report
@@ -92,3 +92,7 @@ if FRONTEND_DIR.exists():
     @app.get("/")
     async def root() -> FileResponse:
         return FileResponse(FRONTEND_DIR / "index.html")
+
+    @app.get("/mocks")
+    async def mocks_redirect() -> RedirectResponse:
+        return RedirectResponse(url="/static/mocks/index.html")

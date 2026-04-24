@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Direction C · Warm modern</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Instrument+Serif:wght@400&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #fcfaf7;
+    --bg-soft: #f8f4ee;
+    --surface: #ffffff;
+    --surface-soft: #fef9f2;
+    --border: #ebe4d9;
+    --border-strong: #dccfbc;
+    --text: #1c1917;
+    --text-soft: #6b5d53;
+    --text-mute: #a8998b;
+    --accent: #ea580c;
+    --accent-2: #f59e0b;
+    --accent-soft: #ffedd5;
+    --danger: #be123c;
+    --success: #15803d;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.55;
+  }
+  .serif { font-family: "Instrument Serif", "Iowan Old Style", Georgia, serif; font-weight: 400; letter-spacing: -0.01em; }
+  .topbar {
+    background: rgba(252, 250, 247, 0.88);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; z-index: 20;
+  }
+  .container { max-width: 1080px; margin: 0 auto; padding: 0 28px; }
+  .topbar-inner { display: flex; align-items: center; gap: 20px; padding: 16px 0; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand .mark {
+    width: 34px; height: 34px; border-radius: 10px;
+    background: linear-gradient(135deg, #fdba74, #ea580c 70%, #9a3412);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: white; font-weight: 700; font-size: 16px;
+    box-shadow: 0 6px 18px rgba(234, 88, 12, 0.28);
+  }
+  .brand-name { font-weight: 600; letter-spacing: -0.01em; }
+  .brand-sub { color: var(--text-mute); font-size: 12px; }
+  .tabs { background: var(--surface); border: 1px solid var(--border); border-radius: 999px; padding: 4px; display: flex; margin-left: 8px; }
+  .tab { padding: 6px 14px; font-size: 13px; color: var(--text-soft); border-radius: 999px; cursor: pointer; }
+  .tab.active { background: var(--text); color: white; }
+  .status { margin-left: auto; display: flex; gap: 8px; }
+  .pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 12px; background: var(--surface); border: 1px solid var(--border); color: var(--text-soft); }
+  .pill .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--success); }
+  .hero {
+    background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 50%, #fed7aa 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 60px 0 44px;
+    margin-bottom: 28px;
+  }
+  .hero h1 { font-size: 40px; letter-spacing: -0.02em; line-height: 1.08; margin: 0 0 10px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p { color: var(--text-soft); font-size: 16px; max-width: 560px; margin: 0; }
+  main { padding: 0 0 140px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 28px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 2px rgba(28, 25, 23, 0.03);
+  }
+  .section-head { display: flex; align-items: flex-start; gap: 14px; margin-bottom: 20px; }
+  .step-num {
+    width: 36px; height: 36px; border-radius: 12px;
+    background: var(--accent-soft); color: var(--accent);
+    font-weight: 600; font-size: 15px;
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .section-head h2 { font-size: 20px; letter-spacing: -0.01em; margin: 0; font-family: "Instrument Serif", serif; font-weight: 400; }
+  .section-head .help { color: var(--text-soft); font-size: 13.5px; margin-top: 2px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .label { display: block; font-size: 12.5px; color: var(--text-soft); font-weight: 500; margin-bottom: 6px; }
+  .input {
+    width: 100%;
+    background: var(--surface-soft);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: var(--text);
+  }
+  .input:focus { outline: none; border-color: var(--accent); background: white; box-shadow: 0 0 0 4px var(--accent-soft); }
+  textarea.input { resize: vertical; min-height: 78px; }
+  .stage {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 16px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--surface-soft);
+    margin-bottom: 10px;
+  }
+  .stage.on { background: white; }
+  .stage-name { font-weight: 500; }
+  .stage-meta { color: var(--text-mute); font-size: 12.5px; }
+  .chip { font-size: 11px; padding: 2px 10px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); margin-right: 8px; font-weight: 500; }
+  .persona {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    background: var(--surface-soft);
+    display: flex; gap: 12px;
+  }
+  .persona.selected { background: white; border-color: var(--accent); box-shadow: 0 6px 18px rgba(234, 88, 12, 0.12); }
+  .avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 600; font-size: 15px; color: white;
+    flex-shrink: 0;
+  }
+  .persona-name { font-weight: 600; font-size: 14px; }
+  .persona-arch { color: var(--accent); font-size: 12.5px; font-weight: 500; margin-top: 2px; }
+  .persona-sheet { color: var(--text-soft); font-size: 12.5px; margin-top: 8px; line-height: 1.55; }
+  .actions {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    background: rgba(252, 250, 247, 0.95);
+    backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border);
+    padding: 16px 0;
+    z-index: 15;
+  }
+  .btn {
+    font-family: inherit;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, #f97316, #ea580c 70%, #c2410c);
+    color: white;
+    box-shadow: 0 8px 20px rgba(234, 88, 12, 0.35);
+  }
+  .btn-primary:hover { filter: brightness(1.05); }
+  .btn-secondary { background: white; border-color: var(--border-strong); color: var(--text); }
+  .btn-secondary:hover { background: var(--surface-soft); }
+  .btn-ghost { background: transparent; color: var(--text-soft); }
+  /* report */
+  .divider { display: flex; align-items: center; gap: 16px; margin: 60px 0 32px; color: var(--text-mute); font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; }
+  .divider::before, .divider::after { content: ''; flex: 1; border-top: 1px solid var(--border); }
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px; }
+  .metric { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; padding: 22px; }
+  .metric-label { font-size: 12px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+  .metric-value { font-size: 36px; font-family: "Instrument Serif", serif; font-weight: 400; letter-spacing: -0.02em; margin-top: 4px; }
+  .metric-trend { color: var(--success); font-size: 12.5px; margin-top: 4px; }
+  .funnel-row { display: grid; grid-template-columns: 180px 1fr 70px; gap: 16px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; }
+  .funnel-row:last-child { border-bottom: none; }
+  .funnel-label { color: var(--text-soft); }
+  .funnel-bar { height: 10px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; }
+  .funnel-bar-fill { height: 100%; background: linear-gradient(90deg, #fbbf24, #ea580c); border-radius: 999px; }
+  .funnel-n { text-align: right; color: var(--text-mute); font-weight: 500; }
+  .issue {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 18px 20px;
+    background: white;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .issue::before { content: ''; position: absolute; left: 0; top: 24px; bottom: 24px; width: 3px; background: linear-gradient(180deg, #ea580c, #be123c); border-radius: 999px; }
+  .issue-title { font-weight: 600; font-size: 15px; padding-left: 10px; }
+  .issue-freq { color: var(--accent); font-size: 12.5px; margin-left: 8px; }
+  .issue-meta { color: var(--text-mute); font-size: 12.5px; padding-left: 10px; margin-top: 3px; }
+  .issue-recom { font-size: 13.5px; margin-top: 10px; padding-left: 10px; color: var(--text); }
+  .issue-quotes { list-style: none; margin: 8px 0 0 10px; padding: 0; color: var(--text-soft); font-size: 13px; font-style: italic; }
+  .issue-quotes li { padding: 2px 0; }
+  .issue-quotes li::before { content: '“'; margin-right: 2px; color: var(--accent); font-style: normal; }
+  .issue-quotes li::after { content: '”'; margin-left: 2px; color: var(--accent); font-style: normal; }
+  .pj { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 16px 18px; margin-top: 10px; }
+  .pj-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .pj-name { font-weight: 600; font-size: 14.5px; }
+  .pj-arch { color: var(--accent); font-size: 12.5px; font-weight: 500; margin-left: 6px; }
+  .status-chip { font-size: 11.5px; padding: 4px 12px; border-radius: 999px; font-weight: 500; }
+  .status-chip.ok { background: #dcfce7; color: var(--success); }
+  .status-chip.bad { background: #ffe4e6; color: var(--danger); }
+  .pj-summary { font-family: "Instrument Serif", serif; font-size: 16px; color: var(--text-soft); margin: 14px 0 16px; line-height: 1.4; }
+  .stage-r { border-left: 3px solid var(--success); padding: 8px 0 8px 14px; margin: 10px 0; border-radius: 0 8px 8px 0; }
+  .stage-r.dropped { border-left-color: var(--danger); background: #fef2f2; padding-right: 14px; }
+  .stage-r-label { font-size: 11px; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.06em; }
+  .stage-r-text { font-size: 13.5px; margin-top: 4px; }
+  .stage-r-scores { color: var(--text-mute); font-size: 12.5px; margin-top: 5px; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <span class="mark">C</span>
+        <div>
+          <div class="brand-name">Crowdm</div>
+          <div class="brand-sub">native-ads audience simulator</div>
+        </div>
+      </div>
+      <div class="tabs">
+        <div class="tab active">Setup</div>
+        <div class="tab">Report</div>
+      </div>
+      <div class="status">
+        <span class="pill"><span class="dot"></span> API key set</span>
+        <span class="pill">claude-opus-4-7</span>
+      </div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <div class="container">
+      <h1 class="serif">See where your funnel <em>loses people</em>,<br/>before you spend budget.</h1>
+      <p>Walk a synthetic audience through your native-ads funnel. Read their reactions at every stage, find what's working, fix what isn't.</p>
+    </div>
+  </div>
+
+  <main class="container">
+
+    <!-- Section 1 -->
+    <div class="card">
+      <div class="section-head">
+        <span class="step-num">1</span>
+        <div>
+          <h2 class="serif">Product &amp; audience</h2>
+          <div class="help">What you're selling and who it's meant for.</div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div>
+          <label class="label">Product name</label>
+          <input class="input" value="AuroraGlow LED Sunrise Alarm" />
+        </div>
+        <div>
+          <label class="label">Price shown</label>
+          <input class="input" value="$79 (was $119) · free shipping" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label class="label">Target audience</label>
+          <input class="input" value="Urban 25–45, poor sleep, already use wellness apps" />
+        </div>
+        <div style="grid-column: 1 / -1;">
+          <label class="label">Description</label>
+          <textarea class="input">Bedside alarm that simulates a 30-min sunrise. Bluetooth speaker, FM radio, USB-C, 20 light modes.</textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Section 3: stages -->
+    <div class="card">
+      <div class="section-head">
+        <span class="step-num">3</span>
+        <div>
+          <h2 class="serif">Funnel stages</h2>
+          <div class="help">URL, pasted text, or screenshot for each stage.</div>
+        </div>
+      </div>
+      <div class="stage on"><div><span class="chip">ACTIVE</span><span class="stage-name">Native ad</span></div><span class="stage-meta">headline + body + CTA</span></div>
+      <div class="stage on"><div><span class="chip">ACTIVE</span><span class="stage-name">Landing page A</span></div><span class="stage-meta">text · 620 chars</span></div>
+      <div class="stage"><div><span class="stage-name" style="color: var(--text-mute);">Landing page B</span></div><span class="stage-meta">skipped</span></div>
+      <div class="stage on"><div><span class="chip">ACTIVE</span><span class="stage-name">Structure / offer</span></div><span class="stage-meta">text · 410 chars</span></div>
+      <div class="stage on"><div><span class="chip">ACTIVE</span><span class="stage-name">Price page</span></div><span class="stage-meta">text · 280 chars</span></div>
+      <div class="stage on"><div><span class="chip">ACTIVE</span><span class="stage-name">Checkout</span></div><span class="stage-meta">text · 195 chars</span></div>
+    </div>
+
+    <!-- Section 4: personas -->
+    <div class="card">
+      <div class="section-head" style="justify-content: space-between;">
+        <div style="display: flex; gap: 14px;">
+          <span class="step-num">4</span>
+          <div>
+            <h2 class="serif">Personas</h2>
+            <div class="help">Edit the built-ins to fit your audience or add custom ones.</div>
+          </div>
+        </div>
+        <div style="margin-left: auto; display: flex; gap: 8px; align-items: center;">
+          <span class="pill">6 selected</span>
+          <button class="btn btn-secondary" style="padding: 6px 14px; font-size: 12.5px;">+ Add custom</button>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="persona selected">
+          <input type="checkbox" checked />
+          <span class="avatar" style="background: linear-gradient(135deg, #f472b6, #db2777);">M</span>
+          <div style="flex: 1;">
+            <div class="persona-name">Maya, 28</div>
+            <div class="persona-arch">Impulse scroller</div>
+            <div class="persona-sheet">Urban renter, phone-first, $40–120 per impulse purchase. Clean photography, real reviews, fast shipping.</div>
+          </div>
+        </div>
+        <div class="persona selected">
+          <input type="checkbox" checked />
+          <span class="avatar" style="background: linear-gradient(135deg, #60a5fa, #2563eb);">P</span>
+          <div style="flex: 1;">
+            <div class="persona-name">Dr. Priya, 51</div>
+            <div class="persona-arch">Skeptical researcher</div>
+            <div class="persona-sheet">Reads reviews 20+ min before buying. Specs, warranty, return policy. Bounces from drop-shipper templates.</div>
+          </div>
+        </div>
+        <div class="persona selected">
+          <input type="checkbox" checked />
+          <span class="avatar" style="background: linear-gradient(135deg, #fbbf24, #d97706);">A</span>
+          <div style="flex: 1;">
+            <div class="persona-name">Alicia, 39</div>
+            <div class="persona-arch">Budget-constrained parent</div>
+            <div class="persona-sheet">Tight budget. Durability, safety, free returns. Bounces at subscription traps or hidden charges.</div>
+          </div>
+        </div>
+        <div class="persona">
+          <input type="checkbox" />
+          <span class="avatar" style="background: linear-gradient(135deg, #34d399, #059669);">M</span>
+          <div style="flex: 1;">
+            <div class="persona-name">Marcus, 55</div>
+            <div class="persona-arch">Premium buyer</div>
+            <div class="persona-sheet">Executive, $300–1500 AOV. Bounces from low-rent design, pop-ups, fake countdowns.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider">Report preview</div>
+
+    <div class="metrics">
+      <div class="metric">
+        <div class="metric-label">Personas simulated</div>
+        <div class="metric-value">6</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Reached checkout</div>
+        <div class="metric-value">33%</div>
+        <div class="metric-trend" style="color: var(--danger);">67% funnel drop</div>
+      </div>
+      <div class="metric">
+        <div class="metric-label">Issues found</div>
+        <div class="metric-value">5</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head"><span class="step-num" style="background: var(--accent-soft);">📊</span><div><h2 class="serif">Funnel drop-off</h2></div></div>
+      <div class="funnel-row"><span class="funnel-label">Native ad</span><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 100%;"></div></div><span class="funnel-n">6 / 6</span></div>
+      <div class="funnel-row"><span class="funnel-label">Landing page A</span><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 83%;"></div></div><span class="funnel-n">5 / 6</span></div>
+      <div class="funnel-row"><span class="funnel-label">Structure</span><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 67%;"></div></div><span class="funnel-n">4 / 6</span></div>
+      <div class="funnel-row"><span class="funnel-label">Price page</span><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 50%;"></div></div><span class="funnel-n">3 / 6</span></div>
+      <div class="funnel-row"><span class="funnel-label">Checkout</span><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 33%;"></div></div><span class="funnel-n">2 / 6</span></div>
+    </div>
+
+    <div class="card">
+      <div class="section-head"><span class="step-num" style="background: var(--accent-soft);">⚑</span><div><h2 class="serif">Top issues</h2></div></div>
+      <div class="issue">
+        <div class="issue-title">Newsletter discount feels like subscription trap <span class="issue-freq">×4</span></div>
+        <div class="issue-meta">Stage: Price page · high impact</div>
+        <div class="issue-recom">→ Reword the $10 off offer as a one-time coupon, not a recurring subscription prompt.</div>
+        <ul class="issue-quotes">
+          <li>Subscribe to save another $10 — what am I subscribing to?</li>
+          <li>I don't want recurring charges just to get the discount.</li>
+        </ul>
+      </div>
+      <div class="issue">
+        <div class="issue-title">Ad promise vs landing page mismatch <span class="issue-freq">×3</span></div>
+        <div class="issue-meta">Stage: Landing page A · medium impact</div>
+        <div class="issue-recom">→ Lead with the sunrise metaphor on landing; the page jumps to reviews too fast.</div>
+        <ul class="issue-quotes">
+          <li>The ad hooked me, the landing page didn't pay it off.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-head"><span class="step-num" style="background: var(--accent-soft);">♛</span><div><h2 class="serif">Per-persona journeys</h2></div></div>
+      <div class="pj">
+        <div class="pj-head">
+          <div>
+            <span class="avatar" style="width: 28px; height: 28px; font-size: 12px; background: linear-gradient(135deg, #60a5fa, #2563eb); vertical-align: middle; margin-right: 8px;">P</span>
+            <span class="pj-name">Dr. Priya, 51</span>
+            <span class="pj-arch">· Skeptical researcher</span>
+          </div>
+          <span class="status-chip bad">✕ dropped at price page</span>
+        </div>
+        <div class="pj-summary">"The product has promise, but the price page feels pushy. I'd need more detail about warranty and real reviews before I'd commit."</div>
+        <div class="stage-r">
+          <div class="stage-r-label">Native ad</div>
+          <div class="stage-r-text">The metaphor is nice but I'd need to verify the sleep claims. I'll click to investigate.</div>
+          <div class="stage-r-scores">clarity 7 · trust 5 · urgency 2 · cta 6</div>
+        </div>
+        <div class="stage-r">
+          <div class="stage-r-label">Landing page A</div>
+          <div class="stage-r-text">4.8 stars from 2,400 reviews is good, but I want methodology behind the sunrise claim.</div>
+          <div class="stage-r-scores">clarity 7 · trust 6 · urgency 2 · cta 5</div>
+        </div>
+        <div class="stage-r dropped">
+          <div class="stage-r-label">Price page</div>
+          <div class="stage-r-text">"Subscribe to save another $10" reads like a trick. I don't want to sign up for anything.</div>
+          <div class="stage-r-scores">clarity 5 · trust 3 · price_fit 4 · urgency 2 · cta 3</div>
+          <div style="color: var(--danger); font-size: 12.5px; margin-top: 6px;">Drop reason: subscription trap, trust not built yet.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <div class="actions">
+    <div class="container" style="display: flex; gap: 10px; align-items: center;">
+      <button class="btn btn-primary">Run simulation →</button>
+      <button class="btn btn-secondary">Load demo</button>
+      <button class="btn btn-secondary">View last results</button>
+      <a href="index.html" class="btn btn-ghost" style="margin-left: auto; text-decoration: none;">← Back to mocks</a>
+    </div>
+  </div>
+
+</body>
+</html>

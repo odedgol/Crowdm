@@ -34,6 +34,7 @@
       </nav>
 
       <div class="ml-auto flex items-center gap-2" x-show="health">
+        <a href="/mocks" class="pill" style="text-decoration: none;">UI mocks ↗</a>
         <span class="pill">model · <span x-text="health?.model"></span></span>
         <span class="pill" :class="health?.has_api_key ? 'pill-ok' : 'pill-bad'">
           <span class="dot"></span>

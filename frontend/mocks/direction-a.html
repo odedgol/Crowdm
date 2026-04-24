@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Direction A · Minimal mono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-soft: #fafafa;
+    --border: #e7e7ea;
+    --border-strong: #d0d0d5;
+    --text: #09090b;
+    --text-soft: #52525b;
+    --text-mute: #a1a1aa;
+    --accent: #2563eb;
+    --accent-soft: #eff6ff;
+    --danger: #dc2626;
+    --success: #059669;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  a { color: inherit; }
+  .topbar {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 0;
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .container { max-width: 1020px; margin: 0 auto; padding: 0 28px; }
+  .topbar-inner { display: flex; align-items: center; gap: 18px; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 600; letter-spacing: -0.01em; }
+  .brand .mark {
+    width: 22px; height: 22px; border-radius: 6px;
+    background: var(--text);
+    display: inline-flex; align-items: center; justify-content: center;
+    color: white; font-size: 11px; font-weight: 700;
+  }
+  .tabs { display: flex; gap: 2px; }
+  .tab { padding: 6px 12px; font-size: 13px; color: var(--text-soft); border-radius: 6px; cursor: pointer; }
+  .tab.active { background: var(--text); color: white; }
+  .status { margin-left: auto; display: flex; gap: 12px; align-items: center; font-size: 12.5px; color: var(--text-mute); }
+  .status .dot { width: 6px; height: 6px; border-radius: 999px; background: var(--success); display: inline-block; margin-right: 5px; }
+  main { padding: 40px 0 120px; }
+  h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 0 0 4px; }
+  .lede { color: var(--text-soft); font-size: 14px; margin-bottom: 32px; }
+  .section { border-top: 1px solid var(--border); padding: 32px 0; display: grid; grid-template-columns: 220px 1fr; gap: 48px; }
+  .section:first-of-type { border-top: none; padding-top: 0; }
+  .section-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+  .section-title .num { color: var(--text-mute); font-weight: 500; margin-right: 6px; }
+  .section-help { color: var(--text-soft); font-size: 13px; margin-top: 4px; max-width: 220px; }
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .label { font-size: 12px; color: var(--text-soft); font-weight: 500; display: block; margin-bottom: 4px; }
+  .input {
+    width: 100%;
+    border: 1px solid var(--border-strong);
+    border-radius: 6px;
+    padding: 7px 10px;
+    font-size: 13.5px;
+    font-family: inherit;
+    background: white;
+    color: var(--text);
+  }
+  .input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  textarea.input { resize: vertical; min-height: 72px; }
+  .stage {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13.5px;
+  }
+  .stage.on { border-color: var(--text); }
+  .stage-meta { color: var(--text-mute); font-size: 12px; }
+  .persona {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    gap: 10px;
+  }
+  .persona.selected { border-color: var(--text); box-shadow: inset 0 0 0 1px var(--text); }
+  .persona-name { font-weight: 600; font-size: 13.5px; }
+  .persona-arch { color: var(--text-mute); font-size: 12.5px; }
+  .persona-sheet { color: var(--text-soft); font-size: 12.5px; margin-top: 6px; line-height: 1.45; }
+  .actions {
+    position: sticky; bottom: 0;
+    background: white;
+    border-top: 1px solid var(--border);
+    padding: 14px 0;
+    margin-top: 40px;
+    z-index: 5;
+  }
+  .btn {
+    font-family: inherit;
+    border: 1px solid transparent;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13.5px;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  .btn-primary { background: var(--text); color: white; }
+  .btn-primary:hover { background: #27272a; }
+  .btn-secondary { background: white; border-color: var(--border-strong); color: var(--text); }
+  .btn-secondary:hover { background: var(--surface-soft); }
+  .btn-ghost { background: transparent; color: var(--text-soft); padding: 6px 10px; }
+  .btn-ghost:hover { color: var(--text); }
+  /* report */
+  .report-head { margin-bottom: 20px; }
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 24px; }
+  .metric { border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+  .metric-label { font-size: 11px; letter-spacing: 0.06em; color: var(--text-mute); text-transform: uppercase; }
+  .metric-value { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; margin-top: 4px; }
+  .funnel-row { display: flex; align-items: center; gap: 14px; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+  .funnel-row:last-child { border-bottom: none; }
+  .funnel-label { width: 160px; color: var(--text-soft); }
+  .funnel-bar { flex: 1; height: 8px; background: #f4f4f5; border-radius: 999px; overflow: hidden; }
+  .funnel-bar-fill { height: 100%; background: var(--accent); border-radius: 999px; }
+  .funnel-n { width: 60px; text-align: right; color: var(--text-mute); font-variant-numeric: tabular-nums; }
+  .issue { padding: 14px 0; border-bottom: 1px solid var(--border); }
+  .issue:last-child { border-bottom: none; }
+  .issue-title { font-weight: 600; font-size: 14px; }
+  .issue-meta { color: var(--text-mute); font-size: 12px; margin-top: 2px; }
+  .issue-recom { font-size: 13px; margin-top: 8px; }
+  .issue-quotes { list-style: none; padding: 0; margin: 6px 0 0; color: var(--text-mute); font-size: 12.5px; }
+  .issue-quotes li::before { content: '— '; }
+  .pj { border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; margin-top: 10px; }
+  .pj-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .pj-name { font-weight: 600; font-size: 13.5px; }
+  .pj-tag {
+    font-size: 11px; padding: 2px 9px; border-radius: 999px;
+    font-weight: 500;
+  }
+  .pj-tag-ok { background: #ecfdf5; color: var(--success); border: 1px solid #d1fae5; }
+  .pj-tag-bad { background: #fef2f2; color: var(--danger); border: 1px solid #fecaca; }
+  .pj-summary { font-style: italic; color: var(--text-soft); font-size: 13px; margin-top: 10px; }
+  .stage-r { padding: 10px 0 10px 12px; border-left: 2px solid var(--success); margin-top: 10px; }
+  .stage-r.dropped { border-left-color: var(--danger); }
+  .stage-r-label { font-size: 11px; letter-spacing: 0.05em; color: var(--text-mute); text-transform: uppercase; }
+  .stage-r-text { margin-top: 4px; font-size: 13px; }
+  .stage-r-scores { color: var(--text-mute); font-size: 12px; margin-top: 4px; font-variant-numeric: tabular-nums; }
+  .divider { border-top: 1px dashed var(--border); margin: 56px 0 32px; padding-top: 14px; color: var(--text-mute); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+  .hide-on-setup { display: none; }
+</style>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="container topbar-inner">
+      <div class="brand">
+        <span class="mark">C</span>
+        <span>Crowdm</span>
+      </div>
+      <div class="tabs">
+        <div class="tab active">Setup</div>
+        <div class="tab">Report</div>
+      </div>
+      <div class="status">
+        <span><span class="dot"></span> API key</span>
+        <span>claude-opus-4-7</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+
+    <h1>New simulation</h1>
+    <p class="lede">Walk a synthetic audience through your funnel and see where they bounce, why, and what to fix.</p>
+
+    <!-- Section 1 -->
+    <section class="section">
+      <div>
+        <div class="section-title"><span class="num">01</span>Product &amp; audience</div>
+        <div class="section-help">What you're selling and who it's meant for.</div>
+      </div>
+      <div>
+        <div class="grid-2">
+          <div>
+            <label class="label">Product name</label>
+            <input class="input" value="AuroraGlow LED Sunrise Alarm" />
+          </div>
+          <div>
+            <label class="label">Price</label>
+            <input class="input" value="$79 (was $119) · free shipping" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="label">Target audience</label>
+            <input class="input" value="Urban 25–45, poor sleep, already use wellness apps" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="label">Description</label>
+            <textarea class="input">Bedside alarm that simulates a 30-min sunrise to wake you naturally. Bluetooth speaker, FM radio, USB-C charging, 20 light modes.</textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 2 -->
+    <section class="section">
+      <div>
+        <div class="section-title"><span class="num">02</span>Ad creative</div>
+        <div class="section-help">The native-ad slot on the publisher site.</div>
+      </div>
+      <div>
+        <div class="grid-2">
+          <div>
+            <label class="label">Headline</label>
+            <input class="input" value="The Alarm That Wakes You With Sunlight, Not Sound" />
+          </div>
+          <div>
+            <label class="label">CTA</label>
+            <input class="input" value="See how it works" />
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label class="label">Body</label>
+            <textarea class="input">Thousands of light sleepers finally wake up without dread. 30-min sunrise simulation. Free US shipping.</textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Section 3 -->
+    <section class="section">
+      <div>
+        <div class="section-title"><span class="num">03</span>Funnel stages</div>
+        <div class="section-help">URL, pasted text, or screenshot for each stage.</div>
+      </div>
+      <div>
+        <div class="stage on"><span>Landing page A</span><span class="stage-meta">text · 620 chars</span></div>
+        <div class="stage on"><span>Structure / offer page</span><span class="stage-meta">text · 410 chars</span></div>
+        <div class="stage on"><span>Price page</span><span class="stage-meta">text · 280 chars</span></div>
+        <div class="stage on"><span>Checkout</span><span class="stage-meta">text · 195 chars</span></div>
+        <div class="stage"><span>Landing page B</span><span class="stage-meta">— skipped</span></div>
+      </div>
+    </section>
+
+    <!-- Section 4 -->
+    <section class="section">
+      <div>
+        <div class="section-title"><span class="num">04</span>Personas</div>
+        <div class="section-help">Edit the built-ins to match your audience or add custom ones. <span style="color:var(--text); font-weight: 500;">6 selected</span></div>
+      </div>
+      <div>
+        <div class="grid-2">
+          <div class="persona selected">
+            <input type="checkbox" checked />
+            <div>
+              <div class="persona-name">Maya, 28</div>
+              <div class="persona-arch">Impulse scroller</div>
+              <div class="persona-sheet">Urban renter, phone-first, $40–120 per impulse purchase. Trust triggers: clean photography, real-people reviews, fast shipping. Bounces on crowded pages…</div>
+            </div>
+          </div>
+          <div class="persona selected">
+            <input type="checkbox" checked />
+            <div>
+              <div class="persona-name">Dr. Priya, 51</div>
+              <div class="persona-arch">Skeptical researcher</div>
+              <div class="persona-sheet">Reads reviews 20+ min before buying. Looks for specs, warranty, return policy. Bounces if site looks like a drop-shipper template…</div>
+            </div>
+          </div>
+          <div class="persona selected">
+            <input type="checkbox" checked />
+            <div>
+              <div class="persona-name">Alicia, 39</div>
+              <div class="persona-arch">Budget-constrained parent</div>
+              <div class="persona-sheet">Tight budget, $30–80 discretionary. Trust triggers: durability, safety, free returns. Bounces at subscription traps…</div>
+            </div>
+          </div>
+          <div class="persona">
+            <input type="checkbox" />
+            <div>
+              <div class="persona-name">Marcus, 55</div>
+              <div class="persona-arch">Premium buyer</div>
+              <div class="persona-sheet">Executive, $300–1500 AOV. Bounces from low-rent design, pop-ups, fake countdowns…</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <div class="divider">Report preview</div>
+
+    <!-- Report -->
+    <section>
+      <div class="report-head">
+        <h1>Simulation report</h1>
+        <p class="lede">Campaign A · 6 personas · tokens in 3.2k · cache_read 42.1k · out 5.8k</p>
+      </div>
+
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">Personas simulated</div><div class="metric-value">6</div></div>
+        <div class="metric"><div class="metric-label">Reached checkout</div><div class="metric-value">33%</div></div>
+        <div class="metric"><div class="metric-label">Issues found</div><div class="metric-value">5</div></div>
+      </div>
+
+      <div style="border:1px solid var(--border); border-radius: 8px; padding: 20px 22px; margin-bottom: 20px;">
+        <div style="font-size: 11px; letter-spacing: 0.06em; color: var(--text-mute); text-transform: uppercase; margin-bottom: 14px;">Funnel drop-off</div>
+        <div class="funnel-row"><div class="funnel-label">Native ad</div><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 100%;"></div></div><div class="funnel-n">6 / 6</div></div>
+        <div class="funnel-row"><div class="funnel-label">Landing page A</div><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 83%;"></div></div><div class="funnel-n">5 / 6</div></div>
+        <div class="funnel-row"><div class="funnel-label">Structure</div><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 67%;"></div></div><div class="funnel-n">4 / 6</div></div>
+        <div class="funnel-row"><div class="funnel-label">Price</div><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 50%;"></div></div><div class="funnel-n">3 / 6</div></div>
+        <div class="funnel-row"><div class="funnel-label">Checkout</div><div class="funnel-bar"><div class="funnel-bar-fill" style="width: 33%;"></div></div><div class="funnel-n">2 / 6</div></div>
+      </div>
+
+      <div style="border:1px solid var(--border); border-radius: 8px; padding: 4px 22px;">
+        <div style="font-size: 11px; letter-spacing: 0.06em; color: var(--text-mute); text-transform: uppercase; margin: 18px 0 4px;">Top issues</div>
+        <div class="issue">
+          <div class="issue-title">Newsletter discount feels like a subscription trap · ×4</div>
+          <div class="issue-meta">Stage: Price page</div>
+          <div class="issue-recom">→ Reword the $10 off offer as a one-time coupon, not a recurring subscription prompt.</div>
+          <ul class="issue-quotes">
+            <li>"Subscribe to save another $10 — what am I subscribing to?"</li>
+            <li>"I don't want recurring charges just to get the discount."</li>
+          </ul>
+        </div>
+        <div class="issue">
+          <div class="issue-title">Ad promise vs. landing page mismatch · ×3</div>
+          <div class="issue-meta">Stage: Landing page A</div>
+          <div class="issue-recom">→ Lead with the sunrise metaphor on landing; the ad is emotional but the page jumps to reviews before setting the scene.</div>
+          <ul class="issue-quotes">
+            <li>"The ad hooked me, the landing page didn't pay it off."</li>
+          </ul>
+        </div>
+      </div>
+
+      <div style="margin-top: 24px; font-size: 11px; letter-spacing: 0.06em; color: var(--text-mute); text-transform: uppercase;">Per-persona journeys</div>
+
+      <div class="pj">
+        <div class="pj-head">
+          <div>
+            <span class="pj-name">Dr. Priya, 51</span>
+            <span style="color: var(--text-mute); font-size: 12.5px;"> · Skeptical researcher</span>
+          </div>
+          <span class="pj-tag pj-tag-bad">✕ dropped at Price page</span>
+        </div>
+        <div class="pj-summary">"The product has promise but the price page feels pushy. I need more detail about the warranty and real reviews before I'd commit."</div>
+        <div class="stage-r">
+          <div class="stage-r-label">Native ad</div>
+          <div class="stage-r-text">The metaphor is nice but I'd need to verify the sleep claims. I'll click to investigate.</div>
+          <div class="stage-r-scores">clarity 7 · trust 5 · price_fit — · urgency 2 · cta 6</div>
+        </div>
+        <div class="stage-r">
+          <div class="stage-r-label">Landing page A</div>
+          <div class="stage-r-text">4.8 stars from 2,400 reviews is good, but I want to see the methodology behind the sunrise claim.</div>
+          <div class="stage-r-scores">clarity 7 · trust 6 · price_fit — · urgency 2 · cta 5</div>
+        </div>
+        <div class="stage-r dropped">
+          <div class="stage-r-label">Price page</div>
+          <div class="stage-r-text">"Subscribe to save another $10" reads like a trick. I don't want to sign up for anything.</div>
+          <div class="stage-r-scores">clarity 5 · trust 3 · price_fit 4 · urgency 2 · cta 3</div>
+          <div style="color: var(--danger); font-size: 12.5px; margin-top: 6px;">Drop reason: Feels like a subscription trap; not enough trust built yet.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Sticky action bar -->
+    <div class="actions">
+      <div class="container" style="display: flex; gap: 10px; align-items: center;">
+        <button class="btn btn-primary">Run simulation →</button>
+        <button class="btn btn-secondary">Load demo</button>
+        <button class="btn btn-secondary">View last results</button>
+        <a href="index.html" class="btn btn-ghost" style="margin-left: auto;">← Back to mocks</a>
+      </div>
+    </div>
+
+  </main>
+</body>
+</html>
