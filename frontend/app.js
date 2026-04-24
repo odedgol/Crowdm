@@ -66,6 +66,7 @@ function app() {
     selectedModel: "claude-opus-4-7",
     customOllamaModel: "",
     concurrency: 4,
+    ollamaModels: [],
     running: false,
     errorMsg: "",
     result: null,
@@ -93,6 +94,17 @@ function app() {
         this.errorMsg = "Failed to load personas.";
       }
       this.refreshStorage();
+      this._fetchOllamaModels();
+    },
+
+    async _fetchOllamaModels() {
+      const base = this.health?.ollama_base_url || "http://localhost:11434";
+      try {
+        const r = await fetch(`${base}/api/tags`, { signal: AbortSignal.timeout(4000) });
+        if (!r.ok) return;
+        const data = await r.json();
+        this.ollamaModels = (data.models || []).map((m) => m.name);
+      } catch (e) {}
     },
 
     // ================= PERSONAS =================
