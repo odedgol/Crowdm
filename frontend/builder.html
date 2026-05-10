@@ -123,6 +123,11 @@
   .stage .body { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
   .stage-kind-hint { font-size: 11px; color: var(--text-mute); margin-top: 6px; }
   .stage-kind-hint code { background: var(--bg); padding: 1px 5px; border-radius: 4px; font-size: 11px; border: 1px solid var(--border); }
+  .drop-zone { display: flex; align-items: center; justify-content: center; padding: 18px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: var(--surface-2); color: var(--text-soft); font-size: 12.5px; cursor: pointer; min-height: 80px; }
+  .drop-zone:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-50); }
+  .drop-zone img { max-height: 140px; border-radius: 6px; border: 1px solid var(--border); }
+  .image-preview { margin-top: 8px; max-height: 140px; border-radius: 8px; border: 1px solid var(--border); display: block; }
+  .image-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
   .add-stage { width: 100%; padding: 10px; border: 1.5px dashed var(--border-strong); border-radius: 10px; background: transparent; color: var(--text-soft); font-family: inherit; font-size: 12.5px; font-weight: 500; cursor: pointer; }
   .add-stage:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-50); }
 
@@ -245,6 +250,20 @@
         <div><label class="label">Headline *</label><input class="input" x-model="ad.headline" placeholder="The Alarm That Wakes You With Sunlight, Not Sound" /></div>
         <div><label class="label">CTA</label><input class="input" x-model="ad.cta" placeholder="See how it works" /></div>
         <div class="full"><label class="label">Body</label><textarea class="input" x-model="ad.body" placeholder="Thousands of light sleepers finally wake up without dread."></textarea></div>
+        <div class="full">
+          <label class="label">Image (optional)</label>
+          <div class="image-row">
+            <input class="input" style="flex: 1; min-width: 240px;" x-model="ad.image_description" placeholder="Describe the image (e.g., happy person waking up to warm light)" />
+            <button class="btn btn-sm" @click="$refs.adImage.click()" type="button">Upload image</button>
+            <input type="file" accept="image/*" x-ref="adImage" style="display:none" @change="onAdImage($event, ad)" />
+          </div>
+          <template x-if="ad.image_base64">
+            <div class="image-row">
+              <img class="image-preview" :src="'data:' + ad.image_media_type + ';base64,' + ad.image_base64" />
+              <button class="btn btn-xs btn-ghost" @click="ad.image_base64=null; ad.image_media_type=null;">Remove image</button>
+            </div>
+          </template>
+        </div>
       </div>
       <template x-if="abEnabled">
         <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border);">
@@ -253,6 +272,20 @@
             <div><label class="label">Headline (B)</label><input class="input" x-model="adB.headline" /></div>
             <div><label class="label">CTA (B)</label><input class="input" x-model="adB.cta" /></div>
             <div class="full"><label class="label">Body (B)</label><textarea class="input" x-model="adB.body"></textarea></div>
+            <div class="full">
+              <label class="label">Image (B)</label>
+              <div class="image-row">
+                <button class="btn btn-sm" @click="$refs.adImageB.click()" type="button">Upload image (B)</button>
+                <input type="file" accept="image/*" x-ref="adImageB" style="display:none" @change="onAdImage($event, adB)" />
+                <span style="font-size: 12px; color: var(--text-mute);">Leave empty to inherit A.</span>
+              </div>
+              <template x-if="adB.image_base64">
+                <div class="image-row">
+                  <img class="image-preview" :src="'data:' + adB.image_media_type + ';base64,' + adB.image_base64" />
+                  <button class="btn btn-xs btn-ghost" @click="adB.image_base64=null; adB.image_media_type=null;">Remove image (B)</button>
+                </div>
+              </template>
+            </div>
           </div>
         </div>
       </template>
@@ -308,10 +341,29 @@
                   <span class="tab" :class="stage.inputMode==='url' && 'active'" @click="stage.inputMode='url'">Fetch URL</span>
                   <span class="tab" :class="stage.inputMode==='text' && 'active'" @click="stage.inputMode='text'">Paste Text/HTML</span>
                   <span class="tab" :class="stage.inputMode==='notes' && 'active'" @click="stage.inputMode='notes'">Notes only</span>
+                  <span class="tab" :class="stage.inputMode==='screenshot' && 'active'" @click="stage.inputMode='screenshot'">Screenshot</span>
                 </div>
                 <template x-if="stage.inputMode==='url'"><input class="input mono" x-model="stage.url" placeholder="https://..." /></template>
                 <template x-if="stage.inputMode==='text'"><textarea class="input" x-model="stage.text" placeholder="Paste the visible page text here..." style="min-height: 72px;"></textarea></template>
                 <template x-if="stage.inputMode==='notes'"><input class="input" x-model="stage.notes" placeholder="e.g. has 30s autoplay video at top" /></template>
+                <template x-if="stage.inputMode==='screenshot'">
+                  <div>
+                    <label class="drop-zone">
+                      <template x-if="!stage.screenshot_base64">
+                        <div>Drop screenshot here or <strong>browse</strong></div>
+                      </template>
+                      <template x-if="stage.screenshot_base64">
+                        <img :src="'data:' + stage.screenshot_media_type + ';base64,' + stage.screenshot_base64" />
+                      </template>
+                      <input type="file" accept="image/*" style="display:none" @change="onStageImage($event, stage)" />
+                    </label>
+                    <template x-if="stage.screenshot_base64">
+                      <div class="image-row">
+                        <button class="btn btn-xs btn-ghost" @click="stage.screenshot_base64=null; stage.screenshot_media_type=null;">Remove image</button>
+                      </div>
+                    </template>
+                  </div>
+                </template>
                 <div class="stage-kind-hint">Schema kind (auto): <code x-text="stage._kind"></code></div>
               </div>
             </template>
@@ -562,14 +614,26 @@ function assignKinds(stages) {
 }
 
 function emptyStage(label) {
-  return { uid: uid(), label: label || "", url: "", text: "", notes: "", inputMode: "url", _kind: "landing_a" };
+  return { uid: uid(), label: label || "", url: "", text: "", notes: "", inputMode: "url", _kind: "landing_a", screenshot_base64: null, screenshot_media_type: null };
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = r.result;
+      resolve(typeof s === "string" ? s.split(",")[1] : "");
+    };
+    r.onerror = reject;
+    r.readAsDataURL(file);
+  });
 }
 
 function builderApp() {
   return {
     product: { name: "", description: "", target_audience: "", price: "", vertical: "e-commerce / physical products" },
-    ad: { headline: "", body: "", cta: "", image_description: "" },
-    adB: { headline: "", body: "", cta: "" },
+    ad: { headline: "", body: "", cta: "", image_description: "", image_base64: null, image_media_type: null },
+    adB: { headline: "", body: "", cta: "", image_base64: null, image_media_type: null },
     abEnabled: false,
     stages: [],
     personas: [],
@@ -624,6 +688,22 @@ function builderApp() {
       if (!t) return;
       this.stages = assignKinds(t.stages.map((s) => ({ ...emptyStage(s.label), ...s, uid: uid() })));
       this.showToast(`Applied template: ${t.name}`);
+    },
+    async onStageImage(ev, stage) {
+      const f = ev.target.files[0];
+      if (!f) return;
+      const b64 = await fileToBase64(f);
+      stage.screenshot_base64 = b64;
+      stage.screenshot_media_type = f.type || "image/png";
+      ev.target.value = "";
+    },
+    async onAdImage(ev, target) {
+      const f = ev.target.files[0];
+      if (!f) return;
+      const b64 = await fileToBase64(f);
+      target.image_base64 = b64;
+      target.image_media_type = f.type || "image/png";
+      ev.target.value = "";
     },
 
     // ========== PERSONAS ==========
@@ -707,8 +787,8 @@ function builderApp() {
     resetAll() {
       if (!confirm("Start a new setup? Current fields will be cleared.")) return;
       this.product = { name: "", description: "", target_audience: "", price: "", vertical: "e-commerce / physical products" };
-      this.ad = { headline: "", body: "", cta: "", image_description: "" };
-      this.adB = { headline: "", body: "", cta: "" };
+      this.ad = { headline: "", body: "", cta: "", image_description: "", image_base64: null, image_media_type: null };
+      this.adB = { headline: "", body: "", cta: "", image_base64: null, image_media_type: null };
       this.abEnabled = false;
       this.applyTemplate(BUILTIN_TEMPLATES.find((t) => t.id === "standard"));
       this.resetPersonas();
@@ -743,8 +823,8 @@ function builderApp() {
     _restore(payload) {
       if (!payload) return;
       this.product = payload.product || this.product;
-      this.ad = payload.ad || this.ad;
-      this.adB = payload.adB || { headline: "", body: "", cta: "" };
+      this.ad = { headline: "", body: "", cta: "", image_description: "", image_base64: null, image_media_type: null, ...(payload.ad || {}) };
+      this.adB = { headline: "", body: "", cta: "", image_base64: null, image_media_type: null, ...(payload.adB || {}) };
       this.abEnabled = !!payload.abEnabled;
       this.stages = assignKinds((payload.stages || []).map((s) => ({ ...emptyStage(), ...s, uid: s.uid || uid() })));
       if (Array.isArray(payload.personas) && payload.personas.length) {
@@ -764,10 +844,14 @@ function builderApp() {
     // ========== OUTPUT JSON (Crowdm-import shape) ==========
     _buildCampaign(label, adSource) {
       const stagePayload = this.stages.map((s) => {
-        const base = { kind: s._kind, label: s.label || null };
+        const base = { kind: s._kind, label: s.label || null, enabled: true, inputMode: s.inputMode || "url" };
         if (s.inputMode === "url" && s.url) base.url = s.url;
         if (s.inputMode === "text" && s.text) base.text = s.text;
         if (s.inputMode === "notes" && s.notes) base.notes = s.notes;
+        if (s.inputMode === "screenshot" && s.screenshot_base64) {
+          base.screenshot_base64 = s.screenshot_base64;
+          base.screenshot_media_type = s.screenshot_media_type || "image/png";
+        }
         return base;
       });
       return {
@@ -778,8 +862,8 @@ function builderApp() {
           body: adSource.body || "",
           cta: adSource.cta || "",
           image_description: adSource.image_description || "",
-          image_base64: null,
-          image_media_type: null,
+          image_base64: adSource.image_base64 || null,
+          image_media_type: adSource.image_media_type || null,
         },
         stages: stagePayload,
       };
@@ -793,6 +877,8 @@ function builderApp() {
           body: this.adB.body || this.ad.body,
           cta: this.adB.cta || this.ad.cta,
           image_description: this.ad.image_description,
+          image_base64: this.adB.image_base64 || this.ad.image_base64 || null,
+          image_media_type: this.adB.image_media_type || this.ad.image_media_type || null,
         };
         campaignB = this._buildCampaign("B", merged);
       }
@@ -818,6 +904,8 @@ function builderApp() {
       if (!this.ad.headline.trim()) return "Ad headline required";
       if (this.stages.length === 0) return "Add at least one stage";
       if (this.selectedPersonaCount() === 0) return "Select at least one persona";
+      const badPersona = this.personas.find((p) => p.selected && !p.character_sheet.trim());
+      if (badPersona) return `Persona "${badPersona.name}" is missing a character sheet`;
       return "";
     },
 
@@ -863,14 +951,24 @@ function builderApp() {
           const compat = {
             product: payload.campaignA.product,
             ad: payload.campaignA.ad,
-            adB: payload.campaignB?.ad ? { headline: payload.campaignB.ad.headline, body: payload.campaignB.ad.body, cta: payload.campaignB.ad.cta } : this.adB,
+            adB: payload.campaignB?.ad
+              ? {
+                  headline: payload.campaignB.ad.headline,
+                  body: payload.campaignB.ad.body,
+                  cta: payload.campaignB.ad.cta,
+                  image_base64: payload.campaignB.ad.image_base64 || null,
+                  image_media_type: payload.campaignB.ad.image_media_type || null,
+                }
+              : this.adB,
             abEnabled: !!payload.abEnabled,
             stages: (payload.campaignA.stages || []).map((s) => ({
               label: s.label || "",
               url: s.url || "",
               text: s.text || "",
               notes: s.notes || "",
-              inputMode: s.url ? "url" : (s.text ? "text" : "notes"),
+              screenshot_base64: s.screenshot_base64 || null,
+              screenshot_media_type: s.screenshot_media_type || null,
+              inputMode: s.screenshot_base64 ? "screenshot" : (s.url ? "url" : (s.text ? "text" : "notes")),
             })),
             personas: payload.personas || [],
           };
